@@ -73,14 +73,14 @@ app.use('/api/cheques', require('./routes/cheques'));
 app.use('/api/settings', require('./routes/settings'));
 
 app.get('/', (req, res) => {
-  res.send('RAXWO Tool Rental System API is running...');
+  res.send('Maggi Tool Rental System API is running...');
 });
 
 // Start server for Node hosts (Render/local), but avoid starting inside Vercel serverless runtime.
 // Start server
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
-  console.log(`🚀 RAXWO Tool Rental Backend running on PORT: ${PORT}`);
+  console.log(`🚀 Maggi Tool Rental Backend running on PORT: ${PORT}`);
   console.log(`📡 Database: ${dbName}`);
 });
 

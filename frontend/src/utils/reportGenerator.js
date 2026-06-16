@@ -34,7 +34,7 @@ export const generatePDFReport = ({ title, columns, data, filename }) => {
     doc.setFontSize(22);
     doc.setTextColor(37, 99, 235); // Professional Blue
     doc.setFont('helvetica', 'bold');
-    doc.text('RAXWO Tool Rentals', textStartX, 20);
+    doc.text('Maggi Tool Rentals', textStartX, 20);
 
     // Subtitle / Slogan
     doc.setFontSize(10);
@@ -49,7 +49,7 @@ export const generatePDFReport = ({ title, columns, data, filename }) => {
     doc.setTextColor(60);
     doc.text('123 Main Street, Colombo', pageWidth - 14, 16, { align: 'right' });
     doc.text('Phone: +94 77 123 4567', pageWidth - 14, 21, { align: 'right' });
-    doc.text('Email: info@raxwo.com', pageWidth - 14, 26, { align: 'right' });
+    doc.text('Email: info@maggitoolrentals.com', pageWidth - 14, 26, { align: 'right' });
 
     // Divider Line
     doc.setDrawColor(200, 200, 200);
@@ -95,7 +95,7 @@ export const generatePDFReport = ({ title, columns, data, filename }) => {
         const pageHeight = doc.internal.pageSize.height;
         doc.setFontSize(8);
         doc.setTextColor(150);
-        doc.text('RAXWO Tool Rental System - Confidential Report', 14, pageHeight - 10);
+        doc.text('Maggi Tool Rental System - Confidential Report', 14, pageHeight - 10);
         doc.text(`Page | ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
       }
     });
@@ -159,7 +159,7 @@ export const generateInvoicePDF = (data, type = 'invoice') => {
   doc.setFontSize(24);
   doc.setTextColor(37, 99, 235);
   doc.setFont('helvetica', 'bold');
-  doc.text('RAXWO Tool Rentals', 14, 20);
+  doc.text('Maggi Tool Rentals', 14, 20);
 
   doc.setFontSize(10);
   doc.setTextColor(100);
@@ -170,7 +170,7 @@ export const generateInvoicePDF = (data, type = 'invoice') => {
   doc.setTextColor(60);
   doc.text('123 Main Street, Colombo', pageWidth - 14, 16, { align: 'right' });
   doc.text('Phone: +94 77 123 4567', pageWidth - 14, 21, { align: 'right' });
-  doc.text('Email: info@raxwo.com', pageWidth - 14, 26, { align: 'right' });
+  doc.text('Email: info@maggitoolrentals.com', pageWidth - 14, 26, { align: 'right' });
 
   doc.setDrawColor(200);
   doc.line(14, 32, pageWidth - 14, 32);
