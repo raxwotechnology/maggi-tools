@@ -1,0 +1,116 @@
+/* ═══════════════════════════════════════════
+   RAXWO RESPONSIVE OVERRIDES v3
+   Mobile-first global overrides
+   ═══════════════════════════════════════════ */
+
+@media (max-width: 1024px) {
+  /* Slide out sidebar */
+  .sidebar {
+    transform: translateX(-100%) !important;
+    width: 280px !important;
+    max-width: 88vw;
+    z-index: 1000 !important;
+  }
+  .sidebar.open {
+    transform: translateX(0) !important;
+    box-shadow: 24px 0 60px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Full width main */
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Grids collapse to 2 columns on tablet */
+  .stats-grid, .summary-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  /* Form grids go single column */
+  .form-grid-2, .form-grid-3, .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  /* Tables: let DataTable CSS handle the card transform.
+     Only set overflow for legacy breakdown tables */
+  .report-section-table-wrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .breakdown-table {
+    min-width: 540px !important;
+  }
+
+  /* Audit Log */
+  .audit-header-top {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 16px !important;
+  }
+  .audit-stats { justify-content: center !important; }
+  .audit-stat-card { text-align: center !important; }
+
+  /* Financial Report Header */
+  .report-header {
+    flex-direction: column !important;
+    text-align: center !important;
+    gap: 16px !important;
+  }
+  .report-header-left { flex-direction: column !important; align-items: center !important; }
+  .report-contact-info { text-align: center !important; }
+  .report-meta-section { flex-direction: column !important; align-items: center !important; }
+  .report-meta-details { text-align: center !important; }
+  .report-doc-title { text-align: center !important; }
+  .report-divider { display: none; }
+
+  /* Form adjustments */
+  .item-row {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    padding: 14px !important;
+  }
+
+  /* Hire form scroll area */
+  .hire-form-scroll { padding: 14px !important; }
+
+  /* content area */
+  .content-area { padding: 14px 12px !important; }
+}
+
+@media (max-width: 640px) {
+  /* Grids go single column */
+  .stats-grid, .summary-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Form sections */
+  .form-section { padding: 16px !important; margin-bottom: 12px !important; }
+
+  /* Premium card */
+  .premium-card { padding: 16px !important; border-radius: var(--r-lg) !important; }
+}
+
+@media (max-width: 480px) {
+  /* Inputs & buttons larger for thumbs */
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents iOS zoom */
+  }
+
+  /* KPI cards */
+  .kpi-card { padding: 16px !important; }
+
+  /* Action buttons full width */
+  .action-buttons {
+    grid-template-columns: 1fr !important;
+  }
+  .action-buttons button {
+    height: 52px !important;
+    font-size: 0.9375rem !important;
+  }
+}

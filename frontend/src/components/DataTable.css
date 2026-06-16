@@ -1,0 +1,260 @@
+/* ═══════════════════════════════════════════
+   RAXWO DATA TABLE — Premium Mobile-First v3
+   ═══════════════════════════════════════════ */
+
+/* ── Wrapper ── */
+.table-wrapper {
+  width: 100%;
+  overflow: hidden;
+}
+
+.data-table-root {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Table ── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 700px;
+  font-size: 0.875rem;
+}
+
+/* ── Headers ── */
+.data-table thead tr {
+  background: var(--bg-main);
+  border-bottom: 2px solid var(--border);
+}
+
+.data-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+/* ── Rows ── */
+.data-table tbody tr {
+  border-bottom: 1px solid var(--border-soft);
+  transition: background 0.15s ease;
+}
+.data-table tbody tr:last-child { border-bottom: none; }
+
+.data-table tbody tr.clickable-row {
+  cursor: pointer;
+}
+.data-table tbody tr.clickable-row:hover {
+  background: var(--accent-soft);
+}
+
+.data-table td {
+  padding: 14px 16px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  vertical-align: middle;
+}
+
+/* ── Action column ── */
+.table-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ── Loading shimmer ── */
+.shimmer-loader {
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(90deg, var(--bg-main) 0%, var(--accent-soft) 50%, var(--bg-main) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--r-md);
+}
+
+.loading-cell, .empty-row {
+  padding: 0 !important;
+  text-align: center !important;
+}
+
+.empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 60px 24px;
+}
+
+.empty-icon { font-size: 2.5rem; opacity: 0.5; }
+.empty-content p {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ═══════════════════════════════════════════
+   MOBILE CARD TRANSFORM (< 768px)
+   ═══════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .data-table-root {
+    overflow-x: hidden;
+  }
+
+  .data-table {
+    min-width: unset;
+    display: block;
+    width: 100%;
+  }
+
+  .data-table thead {
+    display: none;
+  }
+
+  .data-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    background: var(--bg-main);
+  }
+
+  /* Each row becomes a premium card */
+  .data-table tbody tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: all 0.25s ease;
+    cursor: pointer;
+  }
+
+  .data-table tbody tr:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--accent-border);
+  }
+
+  .data-table tbody tr:active {
+    transform: translateY(-1px);
+  }
+
+  /* First cell is full-width header */
+  .data-table td:first-child {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text-main);
+    background: var(--bg-card);
+  }
+
+  .data-table td:first-child::before {
+    content: attr(data-label);
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Middle cells in 2-col grid */
+  .data-table td {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-soft);
+    border-right: 1px solid var(--border-soft);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-main);
+    word-break: break-word;
+    align-items: flex-start;
+  }
+
+  .data-table td:nth-child(even) {
+    border-right: none;
+  }
+
+  /* Remove bottom border on last pair */
+  .data-table td:nth-last-child(-n+3):not(:last-child) {
+    border-bottom: none;
+  }
+
+  .data-table td::before {
+    content: attr(data-label);
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    flex-shrink: 0;
+  }
+
+  /* Last cell is the action footer */
+  .data-table td:last-child {
+    grid-column: 1 / -1;
+    flex-direction: column;
+    justify-content: stretch;
+    align-items: stretch;
+    gap: 0;
+    padding: 12px 14px 14px;
+    background: var(--bg-main);
+    border-bottom: none;
+    border-right: none;
+    border-top: 1px solid var(--border-soft);
+    flex-wrap: nowrap;
+    overflow: visible;
+    min-width: 0;
+  }
+
+  .data-table td:last-child::before {
+    display: none;
+  }
+
+  .data-table td:last-child .booking-record-actions {
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+  }
+
+  /* Empty & loading take full width */
+  .data-table tbody tr.empty-row,
+  .data-table tbody tr:has(.loading-cell) {
+    display: block;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .data-table tbody {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .data-table td {
+    padding: 8px 12px;
+    font-size: 0.8125rem;
+  }
+
+  .data-table td:first-child {
+    padding: 12px 14px 10px;
+    font-size: 0.9375rem;
+  }
+}

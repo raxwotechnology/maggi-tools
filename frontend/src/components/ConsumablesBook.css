@@ -1,0 +1,88 @@
+/* ═══════════════════════════════════════════
+   RAXWO CONSUMABLES BOOK — Premium v2
+   Inherits global design tokens from index.css
+   ═══════════════════════════════════════════ */
+
+/* Override legacy class redefinitions — let books.css handle
+   .book-container, .book-summary, .summary-item, etc. globally.
+   This file only adds consumables-specific overrides. */
+
+/* Consumables uses books.css base — no duplicate definitions needed */
+
+/* ── Category Pills ── */
+.consumable-category-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  white-space: nowrap;
+}
+
+/* ── Stock Level Indicators ── */
+.stock-level-critical {
+  color: var(--danger);
+  font-weight: 800;
+}
+.stock-level-low {
+  color: var(--warning);
+  font-weight: 800;
+}
+.stock-level-ok {
+  color: var(--success);
+  font-weight: 700;
+}
+
+/* ── Quick Restock Button ── */
+.restock-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 18px;
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: var(--r-md);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.restock-btn:hover {
+  background: var(--success);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+}
+
+/* ── Consumable Item Row ── */
+.consumable-item-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr auto;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-soft);
+  transition: all 0.2s ease;
+}
+
+.consumable-item-row:hover {
+  background: var(--accent-soft);
+}
+
+@media (max-width: 768px) {
+  .consumable-item-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+}

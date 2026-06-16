@@ -1,0 +1,159 @@
+/* ═══════════════════════════════════════════
+   INVENTORY DASHBOARD — Premium Mobile Layout
+   ═══════════════════════════════════════════ */
+
+.inventory-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeIn 0.4s ease;
+}
+
+/* ── Tab Bar ── */
+.inv-tab-bar {
+  display: flex;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+.inv-tab-bar::-webkit-scrollbar { display: none; }
+
+/* ── Individual Tab Button ── */
+.inv-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.01em;
+}
+
+.inv-tab-btn:hover:not(.inv-tab-active) {
+  background: var(--bg-main);
+  color: var(--text-main);
+}
+
+.inv-tab-active {
+  background: var(--accent-gradient);
+  color: #fff !important;
+  font-weight: 800;
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+
+.inv-tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── search-box used in Tools.jsx header-controls ── */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 16px;
+  background: var(--bg-main);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  transition: all 0.25s ease;
+  min-width: 240px;
+}
+.search-box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: var(--bg-card);
+}
+.search-box input {
+  flex: 1;
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.search-box input::placeholder { color: var(--text-dim); }
+
+/* ── header-controls mobile ── */
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .header-controls {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .search-box {
+    min-width: unset !important;
+    flex: 1 !important;
+    width: 100% !important;
+  }
+
+  /* Tab bar stacks compactly */
+  .inv-tab-bar {
+    border-radius: 14px;
+    padding: 6px;
+    gap: 4px;
+  }
+
+  .inv-tab-btn {
+    padding: 10px 14px;
+    font-size: 0.8125rem;
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Icon only on very small screens, label truncated */
+  .inv-tab-label {
+    display: none;
+  }
+
+  .inv-tab-btn {
+    padding: 10px 14px;
+    justify-content: center;
+  }
+
+  /* Restore label for active tab */
+  .inv-tab-active .inv-tab-label {
+    display: inline;
+    font-size: 0.8rem;
+  }
+
+  .header-controls {
+    flex-direction: column !important;
+  }
+
+  .header-controls > * {
+    width: 100% !important;
+  }
+
+  .refresh-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    height: 46px !important;
+  }
+}

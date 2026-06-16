@@ -1,0 +1,169 @@
+.sms-settings-section {
+  margin-top: 8px;
+}
+
+.sms-template-editor {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.sms-template-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Must beat textarea.premium-input (min-height: 90px) in books.css */
+textarea.sms-template-textarea,
+.sms-template-editor textarea.sms-template-textarea {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 480px !important;
+  height: 480px !important;
+  max-height: 70vh;
+  font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-main);
+  color: var(--text-main);
+  resize: vertical;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.sms-placeholder-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sms-placeholder-group-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  margin: 0 0 6px;
+}
+
+.sms-placeholder-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sms-placeholder-chip {
+  font-size: 0.72rem;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--accent);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.sms-placeholder-chip:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-glow);
+}
+
+.sms-preview-box {
+  flex: 1;
+  min-height: 480px;
+  height: 480px;
+  max-height: 560px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px dashed var(--accent-glow);
+  background: var(--bg-card);
+  font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-main);
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+.sms-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.sms-reset-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.sms-reset-btn:hover {
+  border-color: var(--accent);
+}
+
+.sms-followup-textarea {
+  min-height: 120px;
+}
+
+@media (max-width: 768px) {
+  .sms-template-editor {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .sms-template-panel {
+    width: 100%;
+  }
+
+  textarea.sms-template-textarea,
+  .sms-template-editor textarea.sms-template-textarea {
+    min-height: 480px !important;
+    height: 480px !important;
+    max-height: none;
+    font-size: 0.8rem;
+    width: 100%;
+  }
+
+  .sms-preview-box {
+    min-height: 480px;
+    height: 480px;
+    max-height: none;
+    font-size: 0.8rem;
+    width: 100%;
+  }
+
+  .sms-placeholder-chip {
+    font-size: 0.68rem;
+    padding: 6px 10px;
+  }
+
+  .premium-card .submit-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  textarea.sms-template-textarea,
+  .sms-template-editor textarea.sms-template-textarea,
+  .sms-preview-box {
+    min-height: 420px !important;
+    height: 420px !important;
+  }
+}

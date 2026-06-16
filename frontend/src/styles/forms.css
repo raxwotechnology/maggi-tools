@@ -1,0 +1,866 @@
+/* ═══════════════════════════════════════════
+   RAXWO FORM SYSTEM — Premium v3 Mobile-First
+   ═══════════════════════════════════════════ */
+
+/* ── Form wrapper (inside modal) ── */
+.hire-form {
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  overflow: hidden;
+  max-height: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Scrollable form body */
+.hire-form-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) { .hire-form-scroll { padding: 16px 16px; } }
+@media (max-width: 480px) { .hire-form-scroll { padding: 14px 12px; } }
+
+/* ── Form Section Card ── */
+.form-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 20px 22px;
+  margin-bottom: 16px;
+  transition: border-color 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+.form-section:hover { border-color: var(--accent-border); }
+
+.form-section-title {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--accent);
+  letter-spacing: 0.12em;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.form-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent-soft) 0%, transparent 100%);
+}
+
+/* ── Grid layouts ── */
+.form-grid   { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+@media (max-width: 640px) {
+  .form-grid, .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; gap: 14px; }
+}
+
+/* ── Form Group ── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Form Inputs ── */
+.form-group input:not([type="checkbox"]),
+.form-group select,
+.form-group textarea {
+  height: 48px;
+  padding: 0 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-main);
+  background: var(--bg-main);
+  transition: all 0.2s ease;
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Touch devices: bigger inputs */
+@media (max-width: 768px) {
+  .form-group input:not([type="checkbox"]),
+  .form-group select,
+  .form-group textarea {
+    height: 52px;
+    font-size: 1rem;
+    border-radius: var(--r-md);
+  }
+}
+
+.form-group textarea { height: auto; min-height: 90px; padding: 12px 14px; line-height: 1.5; resize: vertical; }
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: var(--bg-card);
+}
+
+.form-group input::placeholder { color: var(--text-dim); opacity: 0.9; }
+
+/* ── Form Footer (sticky) ── */
+.hire-form-footer {
+  padding: 16px 24px;
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur);
+  border-top: 1px solid var(--border-soft);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.total-display { display: flex; flex-direction: column; }
+.total-display span { font-size: 0.65rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; }
+.total-display strong { font-size: 1.5rem; color: var(--accent); font-weight: 900; letter-spacing: -0.02em; }
+
+@media (max-width: 640px) {
+  .hire-form-footer { flex-direction: column; padding: 16px; gap: 12px; }
+  .hire-form-footer .modal-actions { width: 100%; margin-top: 0; padding-top: 0; border-top: none; flex-direction: row !important; gap: 12px; }
+  .hire-form-footer .modal-actions button { flex: 1; justify-content: center; height: 48px; margin: 0; }
+  .total-display strong { font-size: 1.35rem; }
+}
+
+.select-wrapper { position: relative; display: flex; align-items: center; }
+.input-icon-left { position: absolute; left: 14px; color: var(--text-dim); pointer-events: none; display: flex; }
+.input-icon-left svg { width: 16px !important; height: 16px !important; }
+
+/* ── Banners ── */
+.form-info-banner {
+  margin: 0 0 16px;
+  padding: 14px 18px;
+  background: var(--info-soft);
+  border: 1px solid rgba(14,165,233,0.2);
+  color: var(--info);
+  border-radius: var(--r-md);
+  font-size: 0.875rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: slideInDown 0.35s ease;
+}
+.form-info-banner svg { flex-shrink: 0; width: 18px !important; height: 18px !important; }
+
+@keyframes slideInDown {
+  from { transform: translateY(-8px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+/* ── Loading shimmer input ── */
+.loading-input {
+  border-color: var(--accent-border) !important;
+  background-image: linear-gradient(90deg, var(--bg-main) 0%, var(--accent-soft) 50%, var(--bg-main) 100%);
+  background-size: 200% 100%;
+  animation: loading-shimmer 1.5s infinite;
+}
+@keyframes loading-shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* ── Booking form layout ── */
+.booking-form-wrapper {
+  display: flex;
+  gap: 0;
+  background: var(--bg-main);
+  height: 100%;
+  overflow: hidden;
+}
+
+.booking-form-wrapper .hire-form-scroll {
+  overflow-x: visible;
+}
+
+.booking-form-wrapper .tool-selector-wide,
+.booking-form-wrapper .multi-tool-picker,
+.booking-form-wrapper .form-section:has(.tool-selector-wide) {
+  overflow: visible;
+  position: relative;
+  z-index: 2;
+}
+
+@media (max-width: 768px) {
+  .booking-form-wrapper { flex-direction: column; }
+  .history-panel { width: 100% !important; border-left: none !important; border-top: 1px solid var(--border); max-height: 280px; }
+}
+
+/* ── Tool item row ── */
+.tool-item-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 14px 16px;
+  background: var(--bg-side);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  transition: border-color 0.2s ease;
+  align-items: end;
+}
+.tool-item-row:hover { border-color: var(--accent-border); }
+
+@media (max-width: 640px) {
+  .tool-item-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .tool-item-row > *:first-child { grid-column: 1 / -1; }
+  .tool-item-row > *:last-child { grid-column: 1 / -1; justify-self: end; }
+}
+
+/* ── Accessory item row ── */
+.accessory-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-main);
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  margin-bottom: 8px;
+  border: 1px solid var(--border-soft);
+  gap: 10px;
+}
+
+.accessory-info { flex: 1; min-width: 0; }
+.accessory-price { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+.accessory-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.accessory-subtotal { min-width: 80px; text-align: right; font-weight: 700; color: var(--text-main); font-size: 0.875rem; }
+
+@media (max-width: 480px) {
+  .accessory-item-row { flex-direction: column; align-items: stretch; }
+  .accessory-actions { justify-content: space-between; border-top: 1px solid var(--border-soft); padding-top: 8px; margin-top: 2px; }
+  .accessory-subtotal { text-align: left; }
+}
+
+.remove-acc-btn {
+  background: none; border: none; color: var(--danger);
+  cursor: pointer; padding: 6px; display: flex; align-items: center;
+  border-radius: 6px; transition: background 0.2s;
+}
+.remove-acc-btn:hover { background: var(--danger-soft); }
+.remove-acc-btn svg { width: 16px !important; height: 16px !important; }
+
+.qty-input {
+  width: 56px !important;
+  height: 36px !important;
+  text-align: center;
+  padding: 0 6px !important;
+  font-size: 0.875rem !important;
+}
+
+/* ── History Panel ── */
+.history-panel {
+  width: 300px;
+  background: var(--bg-side);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.35s ease;
+  flex-shrink: 0;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+.history-panel-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--bg-glass);
+  flex-shrink: 0;
+}
+.history-panel-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.history-panel-title svg { color: var(--accent); }
+
+/* ── Quick Add Badges ── */
+.quick-acc-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.quick-add-badge {
+  padding: 5px 12px;
+  border-radius: var(--r-sm);
+  border: 1.5px solid var(--accent-border);
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.quick-add-badge:hover { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+
+/* ── Utility helpers ── */
+.form-flex { display: flex !important; }
+.form-align-center { align-items: center !important; }
+.form-justify-center { justify-content: center !important; }
+.form-flex-column { flex-direction: column !important; }
+.form-gap-md { gap: 16px !important; }
+.form-gap-xs { gap: 4px !important; }
+.form-height-full { height: 100% !important; }
+.form-overflow-hidden { overflow: hidden !important; }
+.form-bg-white { background: #fff !important; }
+.form-bg-side { background: var(--bg-side) !important; }
+.form-bg-main { background: var(--bg-main) !important; }
+.form-text-center { text-align: center !important; }
+.form-text-left { text-align: left !important; }
+.form-text-right { text-align: right !important; }
+.form-text-blue { color: var(--accent) !important; }
+.form-text-xs { font-size: 0.72rem !important; font-weight: 700 !important; }
+.form-flex-1 { flex: 1 !important; }
+.form-nowrap { white-space: nowrap !important; }
+.form-margin-top-xs { margin-top: 4px !important; }
+.form-margin-top-sm { margin-top: 12px !important; }
+.form-margin-top-md { margin-top: 16px !important; }
+.form-margin-top-lg { margin-top: 20px !important; }
+.form-padding-sm { padding: 8px 0 !important; }
+.form-padding-md { padding: 16px !important; }
+.form-flex-between { display: flex; justify-content: space-between; align-items: center; }
+.form-history-panel { width: 300px; background: var(--bg-side); border-left: 1px solid var(--border); display: flex; flex-direction: column; animation: slideInRight 0.35s ease; }
+
+/* pricing breakdown */
+.pricing-breakdown div { font-size: 0.875rem; }
+
+/* Booking pricing — hide stray zero in empty number fields */
+.booking-form-wrapper input[type="number"]::-webkit-outer-spin-button,
+.booking-form-wrapper input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.booking-form-wrapper input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.booking-form-wrapper input[type="number"]:not(:focus):placeholder-shown {
+  color: var(--text-dim);
+}
+
+/* ── New customer banner (booking) ── */
+.new-customer-banner {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  font-size: 0.875rem;
+  color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.new-customer-banner strong { color: var(--accent); }
+
+/* ── Booking tool search & multi-select ── */
+.tool-selector-wide {
+  margin-bottom: 16px;
+  position: relative;
+  width: 100%;
+}
+
+.booking-tool-search,
+.tool-selector-wide .autocomplete-container {
+  width: 100%;
+}
+
+.booking-tool-search input {
+  width: 100%;
+  min-height: 46px;
+  font-size: 0.95rem;
+}
+
+.tool-selector-wide .suggestions-list {
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-width: none;
+}
+
+.multi-tool-picker {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-card);
+  overflow: hidden;
+}
+
+.multi-tool-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-side);
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.multi-tool-count {
+  color: var(--accent);
+}
+
+.multi-tool-picker-list {
+  max-height: 220px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.multi-tool-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.multi-tool-option:last-child { border-bottom: none; }
+.multi-tool-option:hover { background: var(--bg-main); }
+.multi-tool-option.is-selected {
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent);
+}
+
+.multi-tool-option input {
+  margin-top: 4px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.multi-tool-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.875rem;
+  color: var(--text-main);
+  min-width: 0;
+}
+
+.multi-tool-option-text small {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.tool-search-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+/* ── Booking tools dropdown (same as accessories) ── */
+.booking-tool-search.autocomplete-container input,
+.booking-tool-search input {
+  width: 100%;
+  min-height: 46px;
+  font-size: 16px;
+}
+
+.booking-tools-quick-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 12px;
+  background: var(--bg-side);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.booking-tools-quick-add .quick-add-badge.is-added {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.tool-search-hint {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin: 8px 0 0;
+}
+
+.multi-tool-filter {
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  font-size: 0.9rem;
+  background: var(--bg-main);
+}
+
+.multi-tool-picker-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 12px 10px;
+  flex-wrap: wrap;
+}
+
+.multi-tool-action-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.multi-tool-action-btn.muted {
+  background: var(--bg-main);
+  color: var(--text-dim);
+  border-color: var(--border);
+}
+
+.selected-tools-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.selected-tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: 99px;
+  font-size: 0.8rem;
+  color: var(--text-main);
+}
+
+.selected-tool-chip .chip-meta {
+  color: var(--text-dim);
+  font-weight: 500;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-remove {
+  border: none;
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--text-main);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+@media (min-width: 769px) {
+  .multi-tool-picker-list {
+    max-height: 180px;
+  }
+}
+
+/* ── Tool form mobile-friendly selects ── */
+.tool-form-spec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.tool-form-select-wrap {
+  min-width: 0;
+}
+
+.tool-form-select-field {
+  position: relative;
+}
+
+.tool-form-select-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tool-form-select {
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 40px 12px 42px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-main);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  outline: none;
+}
+
+.tool-form-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+@media (max-width: 640px) {
+  .tool-form-spec-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .tool-form-select {
+    min-height: 50px;
+    font-size: 1rem;
+    padding-right: 44px;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   ACCESSORY RENTAL ROWS  (Booking Form)
+   Grid: Name | [Rate·Qty·Days·Total] | Remove
+   ══════════════════════════════════════════════ */
+
+.acc-rental-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.acc-rental-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) 36px;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--bg-side);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  animation: accRowIn 0.2s ease both;
+}
+
+@keyframes accRowIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.acc-rental-row:hover {
+  border-color: var(--accent-border);
+  box-shadow: 0 2px 10px var(--accent-glow);
+}
+
+/* ── Left: Item identity ── */
+.acc-rental-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.acc-rental-id {
+  font-family: monospace;
+  font-size: 0.72rem;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.acc-rental-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.acc-rental-stock {
+  font-size: 0.67rem;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+/* ── Middle: Controls grid ── */
+.acc-rental-controls {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  align-items: end;
+}
+
+.acc-rental-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.acc-rental-label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* Rate/day gets accent styling */
+.acc-rental-field--rate .acc-rental-label {
+  color: var(--accent);
+}
+
+.acc-rental-input {
+  height: 38px;
+  padding: 0 8px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-main);
+  background: var(--bg-main);
+  width: 100%;
+  text-align: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.acc-rental-input::-webkit-outer-spin-button,
+.acc-rental-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.acc-rental-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Rate field — accent tint */
+.acc-rental-field--rate .acc-rental-input {
+  color: var(--accent);
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  font-weight: 800;
+}
+.acc-rental-field--rate .acc-rental-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ── Subtotal cell ── */
+.acc-rental-subtotal {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.acc-rental-subtotal .acc-rental-label { color: var(--text-dim); }
+.acc-rental-subtotal strong {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* ── Remove button ── */
+.acc-rental-remove {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+  align-self: center;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+.acc-rental-remove:hover {
+  background: var(--danger);
+  color: #fff;
+  transform: scale(1.08);
+}
+
+/* ── Tablet (≤ 640px) ── */
+@media (max-width: 640px) {
+  .acc-rental-row {
+    grid-template-columns: 1fr 36px;
+    row-gap: 10px;
+  }
+  .acc-rental-name  { grid-column: 1 / 2; }
+  .acc-rental-remove {
+    grid-column: 2 / 3;
+    grid-row: 1;
+    align-self: start;
+    margin-top: 2px;
+  }
+  .acc-rental-controls {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ── Phone (≤ 420px): 2 cols ── */
+@media (max-width: 420px) {
+  .acc-rental-controls {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .acc-rental-subtotal {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--accent-soft);
+    border-radius: var(--r-sm);
+    padding: 7px 12px;
+    border: 1px solid var(--accent-border);
+  }
+  .acc-rental-subtotal .acc-rental-label { color: var(--accent); }
+}

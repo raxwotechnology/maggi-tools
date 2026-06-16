@@ -1,0 +1,148 @@
+/* ═══════════════════════════════════════════
+   STOCK INVENTORY — Premium Mobile Cards
+   ═══════════════════════════════════════════ */
+
+/* Desktop: show table, hide cards */
+.si-desktop-table { display: block; }
+.si-mobile-grid   { display: none;  }
+
+/* ── Mobile card grid ── */
+@media (max-width: 768px) {
+  .si-desktop-table { display: none !important; }
+  .si-mobile-grid   {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 4px;
+  }
+}
+
+/* ── Individual Card ── */
+.si-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 0;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  animation: fadeIn 0.35s ease;
+  position: relative;
+}
+
+.si-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 18px 18px 0 0;
+}
+
+.si-card-available::before { background: var(--success); }
+.si-card-rented::before    { background: var(--warning); }
+
+.si-card:active {
+  transform: scale(0.985);
+  box-shadow: var(--shadow-md);
+}
+
+/* ── Card Header ── */
+.si-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--bg-glass);
+  backdrop-filter: blur(10px);
+}
+
+.si-card-id {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--text-main);
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  letter-spacing: 0.04em;
+}
+
+.si-card-id svg { color: var(--text-dim); flex-shrink: 0; }
+
+/* ── Card Body ── */
+.si-card-body {
+  padding: 12px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.si-card-row {
+  display: grid;
+  grid-template-columns: 18px auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.si-card-row svg {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.si-card-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.si-card-value {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-main);
+  text-align: right;
+}
+
+/* ── Empty / Loading ── */
+.si-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.si-empty-icon { font-size: 2.5rem; opacity: 0.4; }
+
+.si-empty-state p {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.si-loading-state {
+  padding: 4px 0;
+}
+
+/* ── Responsive tweaks for KPI summary bar inside inventory ── */
+@media (max-width: 640px) {
+  .book-summary {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .book-summary .summary-item:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 400px) {
+  .si-card-header { flex-wrap: wrap; gap: 8px; }
+  .si-card-id { font-size: 0.82rem; }
+}
