@@ -6,6 +6,7 @@ const Invoice = require('../models/Invoice');
 const Account = require('../models/Account');
 const Setting = require('../models/Setting');
 const { sendSMS } = require('../utils/smsService');
+const { buildAdvancePaymentSms } = require('../utils/smsTemplate');
 const { authMiddleware, authorizeRoles } = require('../middleware/authMiddleware');
 
 // Helper to sync back to source
@@ -70,22 +71,34 @@ router.post('/', authMiddleware, authorizeRoles('Admin', 'Manager'), async (req,
       await Account.findByIdAndUpdate(newRecord.accountId, { $inc: { balance: newRecord.paidAmount || 0 } });
     }
 
-    // SEND SMS
+    // SEND SMS for advance / payment received
     try {
-      const client = await Booking.findById(newRecord.bookingId);
-      if (client && client.clientPhone) {
+      const booking = newRecord.bookingId
+        ? await Booking.findById(newRecord.bookingId).lean()
+        : null;
+      const phone = booking?.clientPhone;
+      const amountPaid = Number(newRecord.paidAmount || newRecord.takenAmount) || 0;
+      if (phone && amountPaid > 0) {
         const settings = await Setting.findOne();
-        const msg = `
---- PAYMENT RECEIPT ---
-Customer: ${newRecord.client}
-Payment Date: ${new Date(newRecord.date).toLocaleDateString()}
-Amount Paid: LKR ${(newRecord.paidAmount || newRecord.takenAmount || 0).toLocaleString()}
-Payment Method: ${newRecord.paymentMethod || 'Cash'}
-Balance Due: LKR ${(newRecord.balance || 0).toLocaleString()}
-
-Terms: Payments are non-refundable. Late returns incur daily charges.
-Thank you for your business! - ${settings?.companyName || 'RAXWO TOOL RENTALS'}`;
-        await sendSMS(client.clientPhone, msg.trim());
+        const smsData = booking
+          ? {
+              ...booking,
+              totalAmount: newRecord.hireAmount ?? booking.totalAmount,
+              advancePayment: newRecord.takenAmount ?? booking.advancePayment,
+              balanceAmount: newRecord.balance ?? booking.balanceAmount
+            }
+          : {
+              clientName: newRecord.client,
+              totalAmount: newRecord.hireAmount,
+              advancePayment: newRecord.takenAmount,
+              balanceAmount: newRecord.balance,
+              invoiceNo: newRecord.invoiceNo
+            };
+        const msg = buildAdvancePaymentSms(smsData, settings, {
+          amountReceived: amountPaid,
+          paymentMethod: newRecord.paymentMethod || 'Cash'
+        });
+        if (msg) await sendSMS(phone, msg);
       }
     } catch (smsErr) { console.error('Payment SMS fail:', smsErr); }
 

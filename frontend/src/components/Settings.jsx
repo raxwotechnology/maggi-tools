@@ -3,9 +3,11 @@ import api from '../services/api';
 import { Settings as SettingsIcon, Save, Image as ImageIcon, Phone, MapPin, Globe, MessageSquare, RotateCcw, Eye, FileText } from 'lucide-react';
 import {
   DEFAULT_SMS_BOOKING_TEMPLATE,
+  DEFAULT_SMS_ADVANCE_TEMPLATE,
   SMS_PLACEHOLDER_GROUPS,
   resolveBookingTemplate,
   previewSmsTemplate,
+  previewAdvanceSmsTemplate,
   isLegacyShortTemplate
 } from '../utils/smsTemplate';
 import '../styles/books.css';
@@ -22,7 +24,9 @@ const Settings = ({ onSettingsUpdate }) => {
     smsBookingTemplate: '',
     smsFollowupTemplate: '',
     smsReturnTemplate: '',
+    smsAdvanceTemplate: '',
     followupDays: 14,
+    overdueSmsMaxDays: 4,
     privacyPolicy: '',
     termsConditions: '',
     enableOverdueCharges: true,
@@ -33,6 +37,7 @@ const Settings = ({ onSettingsUpdate }) => {
   const [saving, setSaving] = useState(false);
   const [phoneInput, setPhoneInput] = useState('');
   const smsTextareaRef = useRef(null);
+  const advanceSmsTextareaRef = useRef(null);
 
   useEffect(() => {
     fetchSettings();
@@ -50,7 +55,9 @@ const Settings = ({ onSettingsUpdate }) => {
         ),
         smsFollowupTemplate: data.smsFollowupTemplate || '',
         smsReturnTemplate: data.smsReturnTemplate || '',
+        smsAdvanceTemplate: data.smsAdvanceTemplate || DEFAULT_SMS_ADVANCE_TEMPLATE,
         followupDays: data.followupDays ?? 14,
+        overdueSmsMaxDays: data.overdueSmsMaxDays ?? 4,
         privacyPolicy: data.privacyPolicy || '',
         termsConditions: data.termsConditions || '',
         enableOverdueCharges: data.enableOverdueCharges ?? true,
@@ -67,6 +74,11 @@ const Settings = ({ onSettingsUpdate }) => {
   const smsPreview = useMemo(
     () => previewSmsTemplate(settings.smsBookingTemplate, settings.companyName || 'MAGGI TOOLS RENTALS'),
     [settings.smsBookingTemplate, settings.companyName]
+  );
+
+  const advanceSmsPreview = useMemo(
+    () => previewAdvanceSmsTemplate(settings.smsAdvanceTemplate, settings),
+    [settings.smsAdvanceTemplate, settings.companyName]
   );
 
   const insertPlaceholder = (token) => {
@@ -337,6 +349,24 @@ const Settings = ({ onSettingsUpdate }) => {
               />
               <p className="upload-hint">Sent to the client when you click "Confirm Return &amp; Pay". Leave blank for the default message.</p>
             </div>
+
+            <div className="form-group" style={{ marginTop: '28px' }}>
+              <label>Advance Payment SMS</label>
+              <textarea
+                ref={advanceSmsTextareaRef}
+                className="premium-input sms-followup-textarea"
+                rows="8"
+                value={settings.smsAdvanceTemplate || ''}
+                onChange={(e) => setSettings({ ...settings, smsAdvanceTemplate: e.target.value })}
+                placeholder={DEFAULT_SMS_ADVANCE_TEMPLATE}
+              />
+              <p className="upload-hint">
+                Sent automatically when an advance or partial payment is recorded. Placeholders: {'{clientName}'}, {'{amountReceived}'}, {'{paymentMethod}'}, {'{invoiceNo}'}, {'{totalAmount}'}, {'{advancePayment}'}, {'{balanceAmount}'}, {'{billLink}'}
+              </p>
+              <div className="sms-preview-box" style={{ marginTop: '12px' }} aria-live="polite">
+                {advanceSmsPreview || '—'}
+              </div>
+            </div>
           </div>
 
           <div className="settings-section sms-settings-section">
@@ -369,6 +399,20 @@ const Settings = ({ onSettingsUpdate }) => {
               <p className="upload-hint">Applied to any item or accessory unless it has a custom overdue rate set in inventory.</p>
             </div>
 
+            <div className="form-group" style={{ marginTop: '20px' }}>
+              <label>Auto SMS for Overdue Returns (Max Days)</label>
+              <input
+                type="number"
+                className="premium-input"
+                style={{ maxWidth: '150px' }}
+                value={settings.overdueSmsMaxDays ?? 4}
+                onChange={(e) => setSettings({ ...settings, overdueSmsMaxDays: Number(e.target.value) })}
+                min="0"
+                disabled={settings.enableOverdueCharges === false}
+              />
+              <p className="upload-hint">Automatic overdue SMS is sent only within this many days after the return date. After that, late-day charges still calculate automatically but no more daily SMS is sent.</p>
+            </div>
+
             <div className="form-group" style={{ marginTop: '28px' }}>
               <label>Automated Overdue SMS Reminder</label>
               <textarea
@@ -379,7 +423,7 @@ const Settings = ({ onSettingsUpdate }) => {
                 placeholder="Dear {clientName}, your rental of {itemName} is overdue by {overdueDays} days. Current overdue charge: LKR {overdueCharge}. Please return the item immediately."
                 disabled={settings.enableOverdueCharges === false}
               />
-              <p className="upload-hint">This message is sent automatically to customers with overdue items.</p>
+              <p className="upload-hint">Sent automatically while items are overdue, up to the max days above. Charges continue after SMS stops.</p>
             </div>
           </div>
 

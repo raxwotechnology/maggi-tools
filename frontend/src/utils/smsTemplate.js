@@ -21,6 +21,23 @@ Contact Us: 0777778845
 
 Thank you for choosing {companyName}!`;
 
+export const DEFAULT_SMS_ADVANCE_TEMPLATE = `--- {companyName} ---
+PAYMENT RECEIPT
+
+Dear {clientName},
+
+We confirm receipt of {amountReceived} via {paymentMethod}.
+
+Invoice: {invoiceNo}
+Total Bill: {totalAmount}
+Total Paid: {advancePayment}
+Balance Due: {balanceAmount}
+
+{billLink}
+Contact Us: 0777778845
+
+Thank you for your payment!`;
+
 export const SMS_PLACEHOLDER_GROUPS = [
   {
     title: 'Customer',
@@ -41,6 +58,10 @@ export const SMS_PLACEHOLDER_GROUPS = [
   {
     title: 'Other',
     keys: ['{companyName}', '{billLink}']
+  },
+  {
+    title: 'Advance Payment',
+    keys: ['{amountReceived}', '{paymentMethod}', '{invoiceNo}']
   }
 ];
 
@@ -225,4 +246,25 @@ export function previewSmsTemplate(template, companyName = 'MAGGI TOOL RENTALS')
     finalText = `${finalText}\n${billLink}`;
   }
   return finalText;
+}
+
+export function previewAdvanceSmsTemplate(template, settings = {}) {
+  const companyName = 'MAGGI TOOL RENTALS';
+  const billLink = 'View Bill: https://maggi-tools.netlify.app/bill/sample-token';
+  let result = (template && template.trim()) ? template.trim() : DEFAULT_SMS_ADVANCE_TEMPLATE;
+  const replacements = {
+    '{clientName}': 'Sample Customer',
+    '{companyName}': companyName,
+    '{amountReceived}': 'LKR 5,000',
+    '{paymentMethod}': 'Cash',
+    '{invoiceNo}': 'INV-25-0001',
+    '{totalAmount}': 'LKR 12,500',
+    '{advancePayment}': 'LKR 5,000',
+    '{balanceAmount}': 'LKR 7,500',
+    '{billLink}': billLink
+  };
+  Object.entries(replacements).forEach(([key, val]) => {
+    result = result.split(key).join(val);
+  });
+  return normalizeSmsText(result);
 }

@@ -89,7 +89,7 @@ const drawHeader = (doc, title) => {
   doc.text(title.toUpperCase(), (pageWidth + 45) / 2, 67, { align: 'center', charSpace: 1.5 });
 };
 
-const drawFooter = (doc) => {
+const drawFooter = (doc, settings = COMPANY_DETAILS) => {
   const pageHeight = doc.internal.pageSize.height;
   const pageWidth = doc.internal.pageSize.width;
   const footerStart = pageHeight - 45;
@@ -107,7 +107,7 @@ const drawFooter = (doc) => {
   doc.setFont('helvetica', 'bold');
   doc.text('CONTACT US', 22, textY - 4);
   doc.setFont('helvetica', 'normal');
-  COMPANY_DETAILS.phones.forEach((p, i) => {
+  (settings.phones || COMPANY_DETAILS.phones).forEach((p, i) => {
     doc.text(p, 22, textY + (i * 4));
   });
 
@@ -115,13 +115,13 @@ const drawFooter = (doc) => {
   doc.setFont('helvetica', 'bold');
   doc.text('EMAIL ADDRESS', 75, textY - 4);
   doc.setFont('helvetica', 'normal');
-  doc.text(COMPANY_DETAILS.email, 75, textY);
+  doc.text(settings.email || COMPANY_DETAILS.email, 75, textY);
 
   // Location Section
   doc.setFont('helvetica', 'bold');
   doc.text('VISIT US', 125, textY - 4);
   doc.setFont('helvetica', 'normal');
-  const addr = doc.splitTextToSize(COMPANY_DETAILS.address, 45);
+  const addr = doc.splitTextToSize(settings.address || COMPANY_DETAILS.address, 45);
   doc.text(addr, 125, textY);
 
   // QR Code Placeholder (Bottom Right)
@@ -376,21 +376,40 @@ export const generateInvoicePDF = async (invoice, mode = 'download') => {
 };
 
 export const generateQuotationPDF = async (quote, mode = 'download') => {
+  const settings = await getDynamicSettings();
+  const activeLogo = settings.logo || logoUrl;
   try {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
 
     try {
-      const img = new Image();
-      img.src = logoUrl;
-      await new Promise((resolve) => { 
-        img.onload = resolve; 
-        img.onerror = resolve; 
-      });
-      doc.addImage(img, 'PNG', 15, 20, 35, 35);
+      const normalized = normalizeLogoForJsPDF(activeLogo);
+      if (normalized?.data) {
+        doc.addImage(normalized.data, normalized.format, 15, 20, 35, 35);
+      } else {
+        const img = new Image();
+        img.src = logoUrl;
+        await new Promise((resolve) => { 
+          img.onload = resolve; 
+          img.onerror = resolve; 
+        });
+        doc.addImage(img, 'PNG', 15, 20, 35, 35);
+      }
     } catch (e) {
-      console.warn("Logo skipped");
+      console.warn("Logo skipped or format invalid");
     }
+
+    // Print Company Name
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...THEME.primary);
+    doc.text(settings.name || 'MAGGI TOOL RENTALS', 55, 35);
+    
+    // Print Contact Number in header optionally
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100);
+    doc.text(`Contact: ${(settings.phones && settings.phones[0]) || '0777778845'}`, 55, 42);
 
     drawHeader(doc, 'Service Quotation');
 
@@ -411,16 +430,22 @@ export const generateQuotationPDF = async (quote, mode = 'download') => {
     doc.setFont('helvetica', 'normal');
     doc.text(quote.clientAddress || 'No Address Provided', pageWidth - 95, 100, { maxWidth: 75 });
 
-    // Specs Table
+    // Specs / Items Table
+    const itemRows = Array.isArray(quote.items) && quote.items.length
+      ? quote.items.map((it) => [
+          `${it.model || it.toolNumber || 'Tool'}${it.toolNumber ? ` (${it.toolNumber})` : ''}`,
+          `${it.quantity || 1} × ${it.days || 1} day(s) @ LKR ${(it.dailyRate || 0).toLocaleString()} = LKR ${(it.lineTotal || 0).toLocaleString()}`
+        ])
+      : [
+          ['Tool Category', quote.toolCategory || 'Any'],
+          ['Specific Tool', quote.toolNo || 'Selection'],
+          ['Refundable Deposit', `LKR ${(quote.refundableDeposit || 0).toLocaleString()}`]
+        ];
+
     autoTable(doc, {
       startY: 115,
-      head: [['TOOL SPECIFICATIONS', 'CAPACITY / LIMITS']],
-      body: [
-        ['Tool Category', quote.toolCategory || 'Any'],
-        ['Specific Tool', quote.toolNo || 'Selection'],
-        ['Refundable Deposit', `LKR ${(quote.refundableDeposit || 0).toLocaleString()}`],
-        ['Usage Limit', 'As per agreement']
-      ],
+      head: [['ITEM / TOOL', 'RENTAL DETAILS']],
+      body: itemRows,
       theme: 'striped',
       headStyles: { fillColor: THEME.primary }
     });
@@ -432,10 +457,12 @@ export const generateQuotationPDF = async (quote, mode = 'download') => {
       startY: currentY + 10,
       head: [['DESCRIPTION OF CHARGES', 'UNIT RATE']],
       body: [
-        ['Mandatory / Base Charge', `LKR ${(quote.mandatoryCharge || 0).toLocaleString()}`],
         ['Transport & Mobilization', `LKR ${(quote.transportCharge || 0).toLocaleString()}`],
-        ['Extra Hour Rate', `LKR ${(quote.extraHourRate || 0).toLocaleString()}`],
-        ['ESTIMATED TOTAL (MIN)', `LKR ${(quote.estimatedTotal || 0).toLocaleString()}`]
+        ['Other / Base Charge', `LKR ${(quote.mandatoryCharge || 0).toLocaleString()}`],
+        ['Extra Usage Rate', `LKR ${(quote.extraHourRate || 0).toLocaleString()}`],
+        ...(Number(quote.discount) > 0 ? [['Discount', `- LKR ${Number(quote.discount).toLocaleString()}`]] : []),
+        ...(Number(quote.refundableDeposit) > 0 ? [['Refundable Deposit', `LKR ${Number(quote.refundableDeposit).toLocaleString()}`]] : []),
+        ['ESTIMATED TOTAL', `LKR ${(quote.estimatedTotal || 0).toLocaleString()}`]
       ],
       theme: 'grid',
       headStyles: { fillColor: THEME.primary },
@@ -453,7 +480,7 @@ export const generateQuotationPDF = async (quote, mode = 'download') => {
     const terms = doc.splitTextToSize(quote.termsAndConditions || 'Standard terms apply.', pageWidth - 30);
     doc.text(terms, 15, termsY + 6);
 
-    drawFooter(doc);
+    drawFooter(doc, settings);
     if (mode === 'print') {
       doc.autoPrint();
       window.open(doc.output('bloburl'), '_blank');

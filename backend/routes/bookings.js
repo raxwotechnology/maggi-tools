@@ -19,6 +19,7 @@ const {
   buildDetailedBillMessage,
   applySmsTemplate,
   resolveBookingTemplate,
+  buildAdvancePaymentSms,
   buildItemsBreakdown,
   getCompanyName
 } = require('../utils/smsTemplate');
@@ -63,6 +64,24 @@ async function buildSMSMessage(templateField, bookingData) {
   } catch (err) {
     console.error('Failed to build SMS from template:', err.message);
     return null;
+  }
+}
+
+async function sendAdvancePaymentSms(bookingData, amountReceived, paymentMethod = 'Cash') {
+  const amt = Number(amountReceived) || 0;
+  if (!bookingData?.clientPhone || amt <= 0) {
+    return { smsSent: false, smsError: null };
+  }
+  try {
+    const settings = await Setting.findOne();
+    const enriched = await enrichBookingForSms(bookingData);
+    const msg = buildAdvancePaymentSms(enriched, settings, { amountReceived: amt, paymentMethod });
+    if (!msg) return { smsSent: false, smsError: 'Empty SMS message' };
+    const result = await sendSMS(bookingData.clientPhone, msg);
+    return { smsSent: !!result.success, smsError: result.error || null };
+  } catch (err) {
+    console.error('Advance payment SMS failed:', err.message);
+    return { smsSent: false, smsError: err.message };
   }
 }
 
@@ -500,7 +519,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
 // Helper for booking side effects
 async function processBookingSideEffects(newBooking, options = {}) {
-    const { isNew = false, oldStatus = null } = options;
+    const { isNew = false, oldStatus = null, previousAdvance = 0 } = options;
     // 1. Auto-generate or Update invoice
     try {
       const existingInvoice = await Invoice.findOne({ bookingId: newBooking._id });
@@ -666,6 +685,20 @@ async function processBookingSideEffects(newBooking, options = {}) {
         }
       }
 
+      // Send advance receipt when payment increases (not on initial booking confirm SMS)
+      const prevAdv = Number(previousAdvance) || 0;
+      const newAdv = parseFloat(newBooking.advancePayment) || 0;
+      const advanceDelta = newAdv - prevAdv;
+      if (advanceDelta > 0 && !isNew) {
+        const advResult = await sendAdvancePaymentSms(
+          newBooking,
+          advanceDelta,
+          newBooking.paymentMethod || 'Cash'
+        );
+        if (advResult.smsSent && !smsSent) smsSent = true;
+        if (advResult.smsError && !smsError) smsError = advResult.smsError;
+      }
+
       return { generatedSms, smsSent, smsError };
 
     } catch (payErr) {
@@ -819,7 +852,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
         );
     
     // Auto-update linked invoice and client
-    await processBookingSideEffects(updatedBooking.toObject(), { oldStatus: booking.status });
+    await processBookingSideEffects(updatedBooking.toObject(), {
+      oldStatus: booking.status,
+      previousAdvance: booking.advancePayment || 0
+    });
     
     res.json(updatedBooking);
   } catch (err) {
@@ -938,6 +974,8 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
       }
     }
 
+    const previousAdvance = booking.advancePayment || 0;
+
     if (paymentAmount !== undefined) {
       booking.advancePayment = (booking.advancePayment || 0) + Number(paymentAmount);
     }
@@ -953,7 +991,10 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
     booking.updatedByName = req.user.name;
 
     const savedBooking = await booking.save();
-    await processBookingSideEffects(savedBooking.toObject(), { oldStatus: booking.status });
+    await processBookingSideEffects(savedBooking.toObject(), {
+      oldStatus: booking.status,
+      previousAdvance
+    });
 
     // Send return confirmation SMS
     try {
@@ -1421,8 +1462,9 @@ router.post('/process-overdue-charges', authMiddleware, async (req, res) => {
         await booking.save();
         processed++;
 
-        // Send overdue SMS reminder (once per day max)
-        if (booking.clientPhone) {
+        // Send overdue SMS only within the first N days (default 4); charges still accumulate after that
+        const maxSmsDays = Number(settings?.overdueSmsMaxDays) || 4;
+        if (booking.clientPhone && bookingTotalOverdueDays > 0 && bookingTotalOverdueDays <= maxSmsDays) {
           const lastSmsSent = booking.followupSentAt ? new Date(booking.followupSentAt) : null;
           const shouldSend = !lastSmsSent || (today - lastSmsSent) > (23 * 60 * 60 * 1000);
           if (shouldSend && bookingTotalOverdueDays > 0) {

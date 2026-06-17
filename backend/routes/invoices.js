@@ -6,6 +6,9 @@ const Counter = require('../models/Counter');
 const Accessory = require('../models/Accessory');
 const Payment = require('../models/Payment');
 const Account = require('../models/Account');
+const Setting = require('../models/Setting');
+const { sendSMS } = require('../utils/smsService');
+const { buildAdvancePaymentSms } = require('../utils/smsTemplate');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
 async function getNextSequence(name) {
@@ -45,12 +48,12 @@ async function syncBookingInvoiceFromInvoice(invoice) {
   if (!invoice.bookingId) return;
   const payload = {
     invoiceId: invoice._id,
-    invoiceNo: invoice.invoiceNo
+    invoiceNo: invoice.invoiceNo,
+    advancePayment: invoice.advancePayment || 0,
+    balanceAmount: invoice.balanceAmount ?? Math.max(0, (invoice.totalAmount || 0) - (invoice.advancePayment || 0))
   };
 
-  // When invoice is paid, booking should reflect the cleared balance
   if (invoice.status === 'Paid') {
-    payload.advancePayment = invoice.totalAmount || 0;
     payload.balanceAmount = 0;
     payload.status = 'Completed';
   }
@@ -157,6 +160,30 @@ router.post('/:id/pay', authMiddleware, async (req, res) => {
     // Update bank balance if Bank Transfer
     if (saved.paymentMethod === 'Bank Transfer' && saved.accountId && amountAdded > 0) {
         await Account.findByIdAndUpdate(saved.accountId, { $inc: { balance: amountAdded } });
+    }
+
+    // Send advance payment SMS when linked to a booking
+    if (amountAdded > 0 && saved.bookingId) {
+      try {
+        const booking = await Booking.findById(saved.bookingId).lean();
+        if (booking?.clientPhone) {
+          const settings = await Setting.findOne();
+          const smsData = {
+            ...booking,
+            invoiceNo: saved.invoiceNo || booking.invoiceNo,
+            totalAmount: saved.totalAmount ?? booking.totalAmount,
+            advancePayment: saved.advancePayment,
+            balanceAmount: saved.balanceAmount
+          };
+          const msg = buildAdvancePaymentSms(smsData, settings, {
+            amountReceived: amountAdded,
+            paymentMethod: paymentMethod || saved.paymentMethod || 'Cash'
+          });
+          if (msg) await sendSMS(booking.clientPhone, msg);
+        }
+      } catch (smsErr) {
+        console.error('Invoice payment SMS failed:', smsErr.message);
+      }
     }
 
     res.json(saved);

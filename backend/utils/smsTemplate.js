@@ -23,6 +23,23 @@ Contact Us: 0777778845
 
 Thank you for choosing {companyName}!`;
 
+const DEFAULT_SMS_ADVANCE_TEMPLATE = `--- {companyName} ---
+PAYMENT RECEIPT
+
+Dear {clientName},
+
+We confirm receipt of {amountReceived} via {paymentMethod}.
+
+Invoice: {invoiceNo}
+Total Bill: {totalAmount}
+Total Paid: {advancePayment}
+Balance Due: {balanceAmount}
+
+{billLink}
+Contact Us: 0777778845
+
+Thank you for your payment!`;
+
 const SMS_PLACEHOLDERS = [
   '{clientName}', '{clientPhone}', '{clientNic}',
   '{pickupLocation}', '{returnLocation}', '{pickupDate}', '{returnDate}',
@@ -252,15 +269,62 @@ function resolveBookingTemplate(settings) {
   return migrateBookingTemplate(raw);
 }
 
+function resolveAdvanceTemplate(settings) {
+  const raw = settings?.smsAdvanceTemplate;
+  if (raw && String(raw).trim()) return String(raw).trim();
+  return DEFAULT_SMS_ADVANCE_TEMPLATE;
+}
+
+function buildAdvancePaymentSms(bookingData, settings, options = {}) {
+  const amountReceived = Number(options.amountReceived) || 0;
+  const paymentMethod = options.paymentMethod || bookingData.paymentMethod || 'Cash';
+  const companyName = getCompanyName(settings);
+  const billLinkLine = buildBillLinkLine(bookingData);
+  const totalPaid = Number(bookingData.advancePayment) || 0;
+  const totalAmount = Number(bookingData.totalAmount) || 0;
+  const balance = Number(bookingData.balanceAmount) ?? Math.max(0, totalAmount - totalPaid);
+
+  const template = resolveAdvanceTemplate(settings);
+  const replacements = {
+    '{clientName}': bookingData.clientName || 'Customer',
+    '{companyName}': companyName,
+    '{amountReceived}': fmtMoney(amountReceived),
+    '{paymentMethod}': paymentMethod,
+    '{invoiceNo}': bookingData.invoiceNo || bookingData.bookingId || '—',
+    '{totalAmount}': fmtMoney(totalAmount),
+    '{advancePayment}': fmtMoney(totalPaid),
+    '{balanceAmount}': fmtMoney(balance),
+    '{billLink}': billLinkLine
+  };
+
+  let result = template;
+  Object.entries(replacements).forEach(([key, val]) => {
+    result = result.split(key).join(val);
+  });
+
+  let finalText = normalizeSmsText(result.replace(/LKR\s+LKR/gi, 'LKR'));
+  finalText = finalText.replace(/raxwo\s+tools?\s+rentals?/gi, companyName);
+  if (billLinkLine && !finalText.includes('View Bill:')) {
+    finalText = `${finalText}\n${billLinkLine}`;
+  }
+  if (!finalText.includes('0777778845')) {
+    finalText = `${finalText}\nContact Us: 0777778845`;
+  }
+  return finalText;
+}
+
 module.exports = {
   DEFAULT_SMS_BOOKING_TEMPLATE,
+  DEFAULT_SMS_ADVANCE_TEMPLATE,
   SMS_PLACEHOLDERS,
   isLegacyShortTemplate,
   buildDetailedBillMessage,
+  buildAdvancePaymentSms,
   buildItemsBreakdown,
   buildBillLinkLine,
   getCompanyName,
   applySmsTemplate,
   resolveBookingTemplate,
+  resolveAdvanceTemplate,
   fmtMoney
 };

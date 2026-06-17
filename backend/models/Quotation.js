@@ -11,11 +11,21 @@ const QuotationSchema = new mongoose.Schema({
   toolNo: { type: String },
   toolSpec1: { type: String },
   toolSpec2: { type: String },
+  items: [{
+    toolNumber: String,
+    model: String,
+    quantity: { type: Number, default: 1 },
+    days: { type: Number, default: 1 },
+    dailyRate: { type: Number, default: 0 },
+    lineTotal: { type: Number, default: 0 }
+  }],
+  refundableDeposit: { type: Number, default: 0 },
   
   // Charges
   mandatoryCharge: { type: Number, default: 0 },
   transportCharge: { type: Number, default: 0 },
   extraHourRate: { type: Number, default: 0 },
+  discount: { type: Number, default: 0 },
   
   // Terms
   validityDays: { type: Number, default: 30 },

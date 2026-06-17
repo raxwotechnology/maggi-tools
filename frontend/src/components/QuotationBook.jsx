@@ -4,7 +4,7 @@ import DataTable from './DataTable';
 import Modal from './Modal';
 import RecordDetails from './RecordDetails';
 import QuotationForm from './QuotationForm';
-import { FileCheck, Plus, Download, Trash2, Search, RefreshCw, FileDown, PlusCircle, Printer, FileText } from 'lucide-react';
+import { FileCheck, Plus, Download, Trash2, Search, RefreshCw, FileDown, PlusCircle, Printer, FileText, Eye } from 'lucide-react';
 import { generateQuotationPDF } from '../utils/billingGenerator';
 import { generatePDFReport } from '../utils/reportGenerator';
 import '../styles/forms.css';
@@ -41,12 +41,15 @@ const QuotationBook = () => {
         validity_disp: `${quote.validityDays || 30} Days`,
         total_disp: `LKR ${(quote.estimatedTotal || 0).toLocaleString()}`,
         status_disp: (
-          <span className={`status-badge ${quote.status === 'Accepted' ? 'status-active' : quote.status === 'Closed' ? 'status-inactive' : quote.status === 'Open' ? 'status-pending' : ''}`}>
+          <span className={`status-badge ${quote.status === 'Accepted' ? 'status-active' : quote.status === 'Cancelled' || quote.status === 'Rejected' ? 'status-inactive' : quote.status === 'Sent' ? 'status-pending' : ''}`}>
             {quote.status || 'Open'}
           </span>
         ),
         action: (
           <div className="table-actions" onClick={e => e.stopPropagation()}>
+             <button className="action-icon-btn btn-details" style={{ background: '#3b82f6', color:'#fff' }} onClick={() => handleRowClick(quote)} title="View Live Preview">
+                <Eye />
+             </button>
              <button className="action-icon-btn btn-print" onClick={() => generateQuotationPDF(quote)} title="Download PDF">
                 <FileDown />
              </button>
@@ -133,7 +136,7 @@ const QuotationBook = () => {
 
   const stats = {
     total: quotations.length,
-    activeCount: quotations.filter(q => q.status === 'Open' || q.status === 'Accepted').length,
+    activeCount: quotations.filter(q => ['Draft', 'Sent', 'Accepted'].includes(q.status)).length,
     totalPotentialRevenue: quotations.reduce((sum, q) => sum + (q.estimatedTotal || 0), 0)
   };
 
@@ -211,7 +214,7 @@ const QuotationBook = () => {
         />
       </Modal>
 
-      <Modal isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} title="Quotation Details">
+      <Modal isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} title="Quotation Live Preview" wide={true}>
         {selectedRecord && <RecordDetails data={selectedRecord} type="quotation" />}
       </Modal>
 

@@ -1,8 +1,303 @@
-import React from 'react';
-import { Download, ShieldCheck, User, Calendar, Package } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, ShieldCheck, User, Calendar, Package, MapPin, Phone, Mail, Printer, CheckCircle, Eye } from 'lucide-react';
 import { generateInvoicePDF, generateQuotationPDF } from '../utils/billingGenerator';
-import { bookingAPI } from '../services/api';
+import api, { bookingAPI } from '../services/api';
+import logoUrl from '../logo.png';
 import './RecordDetails.css';
+
+const QuotationDocumentView = ({ data }) => {
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get('settings');
+        setSettings(res.data);
+      } catch (e) {
+        console.warn('Failed to load settings', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, [data]);
+
+  if (!data) return null;
+
+  const activeLogo = settings?.logo || logoUrl;
+  const companyName = settings?.name || 'MAGGI TOOL RENTALS';
+  const companyAddress = settings?.address || 'No. 241, Rajamaha Vihara Rd, Mirihana, Kotte.';
+  const companyEmail = settings?.email || 'info@raxwo.com';
+  const companyPhones = settings?.phones || ['+94 775 085 815', '+94 723 627 888', '+94 766 779 603'];
+
+  const formattedDate = data.date ? new Date(data.date).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }) : '—';
+
+  return (
+    <div className="quotation-doc-container">
+      <div className="doc-action-bar no-print">
+        <button className="doc-action-btn primary" onClick={() => generateQuotationPDF(data)}>
+          <Download size={16} /> Download PDF
+        </button>
+        <button className="doc-action-btn secondary" onClick={() => generateQuotationPDF(data, 'print')}>
+          <Printer size={16} /> Print Document
+        </button>
+      </div>
+
+      <div className="quotation-paper-sheet">
+        <div className="paper-top-strip">
+          <div className="strip-blue" />
+          <div className="strip-orange" />
+          <div className="strip-blue" />
+        </div>
+
+        <div className="paper-header">
+          <div className="brand-box">
+            <img src={activeLogo} alt="Company Logo" className="brand-logo" />
+            <div className="brand-details">
+              <h1 className="company-title">{companyName}</h1>
+              <div className="company-contact-row">
+                <MapPin size={12} /> <span>{companyAddress}</span>
+              </div>
+              <div className="company-contact-row">
+                <Phone size={12} /> <span>{companyPhones.join(', ')}</span>
+                <span className="dot-divider">•</span>
+                <Mail size={12} /> <span>{companyEmail}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="doc-meta-badge">
+            <div className="meta-label-top">ESTIMATED PROPOSAL</div>
+            <div className="meta-title-large">QUOTATION</div>
+            <div className="meta-info-grid">
+              <div className="meta-info-cell">
+                <span className="cell-lbl">QUOTE NO</span>
+                <span className="cell-val highlight">{data.quotationNo || 'DRAFT'}</span>
+              </div>
+              <div className="meta-info-cell">
+                <span className="cell-lbl">DATE</span>
+                <span className="cell-val">{formattedDate}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="divider-line" />
+
+        <div className="client-info-block">
+          <div className="info-box client-box">
+            <h3 className="section-subtitle">QUOTATION FOR CLIENT</h3>
+            <div className="client-name-bold">{data.clientName || 'PROSPECTIVE CUSTOMER'}</div>
+            <p className="client-address-text">{data.clientAddress || 'No address provided'}</p>
+          </div>
+          
+          <div className="info-box validity-box">
+            <h3 className="section-subtitle">QUOTE PARAMETERS</h3>
+            <table className="mini-meta-table">
+              <tbody>
+                <tr>
+                  <td><strong>Validity Period:</strong></td>
+                  <td>{data.validityDays || 30} Days</td>
+                </tr>
+                <tr>
+                  <td><strong>Status:</strong></td>
+                  <td>
+                    <span className={`status-pill ${data.status?.toLowerCase() || 'draft'}`}>
+                      {data.status || 'Draft'}
+                    </span>
+                  </td>
+                </tr>
+                {data.toolCategory && (
+                  <tr>
+                    <td><strong>Category:</strong></td>
+                    <td>{data.toolCategory}</td>
+                  </tr>
+                )}
+                {data.toolNo && (
+                  <tr>
+                    <td><strong>Tool ID:</strong></td>
+                    <td>{data.toolNo}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="proposal-items-section">
+          <h3 className="section-subtitle">LINE ITEMS & ESTIMATED SERVICE RATES</h3>
+          
+          <div className="responsive-table-wrapper">
+            <table className="doc-items-table">
+              <thead>
+                <tr>
+                  <th>Item / Tool Description</th>
+                  <th className="num-col">Qty</th>
+                  <th className="num-col">Duration</th>
+                  <th className="num-col">Daily Rate</th>
+                  <th className="num-col">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.isArray(data.items) && data.items.length > 0 ? (
+                  data.items.map((it, idx) => (
+                    <tr key={idx}>
+                      <td className="item-desc-cell">
+                        <div className="main-item-name">{it.model || 'Rental Tool'}</div>
+                        {it.toolNumber && <span className="item-sub-id">Serial/ID: {it.toolNumber}</span>}
+                      </td>
+                      <td className="num-col bold-val">{it.quantity || 1}</td>
+                      <td className="num-col">{it.days || 1} day(s)</td>
+                      <td className="num-col">LKR {(it.dailyRate || 0).toLocaleString()}</td>
+                      <td className="num-col bold-val">LKR {(it.lineTotal || 0).toLocaleString()}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td className="item-desc-cell">
+                      <div className="main-item-name">{data.toolCategory || 'Rental Services'}</div>
+                      {data.toolNo && <span className="item-sub-id">Preferred Tool: {data.toolNo}</span>}
+                    </td>
+                    <td className="num-col bold-val">1</td>
+                    <td className="num-col">1 day(s)</td>
+                    <td className="num-col">As per category</td>
+                    <td className="num-col bold-val">—</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mobile-items-list no-print">
+            {Array.isArray(data.items) && data.items.length > 0 ? (
+              data.items.map((it, idx) => (
+                <div key={idx} className="mobile-item-card">
+                  <div className="card-top-row">
+                    <span className="item-card-title">{it.model || 'Rental Tool'}</span>
+                    <span className="item-card-total">LKR {(it.lineTotal || 0).toLocaleString()}</span>
+                  </div>
+                  {it.toolNumber && <div className="item-card-sub">Serial/ID: {it.toolNumber}</div>}
+                  <div className="card-details-grid">
+                    <div className="card-det-cell">
+                      <label>Qty</label>
+                      <span>{it.quantity || 1}</span>
+                    </div>
+                    <div className="card-det-cell">
+                      <label>Duration</label>
+                      <span>{it.days || 1} day(s)</span>
+                    </div>
+                    <div className="card-det-cell">
+                      <label>Daily Rate</label>
+                      <span>LKR {(it.dailyRate || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="mobile-item-card">
+                <div className="card-top-row">
+                  <span className="item-card-title">{data.toolCategory || 'Rental Services'}</span>
+                  <span className="item-card-total">—</span>
+                </div>
+                {data.toolNo && <div className="item-card-sub">Preferred Tool: {data.toolNo}</div>}
+                <div className="card-details-grid">
+                  <div className="card-det-cell">
+                    <label>Qty</label>
+                    <span>1</span>
+                  </div>
+                  <div className="card-det-cell">
+                    <label>Duration</label>
+                    <span>1 day(s)</span>
+                  </div>
+                  <div className="card-det-cell">
+                    <label>Daily Rate</label>
+                    <span>As per category</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="summary-section-block">
+          <div className="spacer-col" />
+          
+          <div className="pricing-breakdown-box">
+            <table className="pricing-table">
+              <tbody>
+                {Number(data.mandatoryCharge) > 0 && (
+                  <tr>
+                    <td>Base / Mandatory Charge:</td>
+                    <td>LKR {Number(data.mandatoryCharge).toLocaleString()}</td>
+                  </tr>
+                )}
+                {Number(data.transportCharge) > 0 && (
+                  <tr>
+                    <td>Transport & Mobilization:</td>
+                    <td>LKR {Number(data.transportCharge).toLocaleString()}</td>
+                  </tr>
+                )}
+                {Number(data.refundableDeposit) > 0 && (
+                  <tr>
+                    <td>Refundable Security Deposit:</td>
+                    <td>LKR {Number(data.refundableDeposit).toLocaleString()}</td>
+                  </tr>
+                )}
+                {Number(data.extraHourRate) > 0 && (
+                  <tr>
+                    <td>Extra Usage Rate (Hourly):</td>
+                    <td>LKR {Number(data.extraHourRate).toLocaleString()}</td>
+                  </tr>
+                )}
+                {Number(data.discount) > 0 && (
+                  <tr className="discount-row">
+                    <td>Discount Offered:</td>
+                    <td>- LKR {Number(data.discount).toLocaleString()}</td>
+                  </tr>
+                )}
+                <tr className="total-highlight-row">
+                  <td>ESTIMATED TOTAL:</td>
+                  <td>LKR {Number(data.estimatedTotal || 0).toLocaleString()}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="terms-conditions-block">
+          <h4 className="terms-title">TERMS & CONDITIONS</h4>
+          <div className="terms-body">
+            {data.termsAndConditions ? (
+              <div style={{ whiteSpace: 'pre-wrap' }}>{data.termsAndConditions}</div>
+            ) : (
+              <ul>
+                <li>Prices are estimated based on requested duration. Extended usage rates apply.</li>
+                <li>Refundable deposit is returned in full upon safe and timely return of the tools.</li>
+                <li>Transport charges cover delivery and collection under standard operating conditions.</li>
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="signature-area">
+          <div className="sig-block">
+            <div className="sig-line" />
+            <label>PREPARED BY</label>
+          </div>
+          <div className="sig-block">
+            <div className="sig-line" />
+            <label>ACCEPTED BY CLIENT</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const RecordDetails = ({ data, type }) => {
   const [history, setHistory] = React.useState([]);
@@ -513,6 +808,10 @@ const RecordDetails = ({ data, type }) => {
   };
 
   const sections = sectionsMap[type] || [];
+
+  if (type === 'quotation') {
+    return <QuotationDocumentView data={data} />;
+  }
 
   return (
     <div className="details-overlay">
