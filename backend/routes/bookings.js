@@ -893,7 +893,7 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
           
           if (actRet > expectedRet) {
             const overdueDays = Math.ceil((actRet - expectedRet) / (1000 * 60 * 60 * 24));
-            const penaltyRate = Number(item.overdueChargePerDay) || 500;
+            const penaltyRate = Number(item.dailyRate) || Number(item.overdueChargePerDay) || 500;
             const penalty = overdueDays * penaltyRate * qty;
             
             if (overdueDays > (item.overdueDays || 0)) {
@@ -936,7 +936,7 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
           
           if (actRet > expectedRet) {
             const overdueDays = Math.ceil((actRet - expectedRet) / (1000 * 60 * 60 * 24));
-            const penaltyRate = Number(acc.overdueChargePerDay) || 500;
+            const penaltyRate = Number(acc.price) || Number(acc.overdueChargePerDay) || 500;
             const penalty = overdueDays * penaltyRate * qty;
             
             if (overdueDays > (acc.overdueDays || 0)) {
@@ -1371,7 +1371,14 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // Process overdue charges for all active bookings (call daily via cron or manually)
 router.post('/process-overdue-charges', authMiddleware, async (req, res) => {
   try {
-    const settings = await Setting.findOne().lean();
+    let settings = await Setting.findOne();
+    if (settings) {
+      const oldDefault = 'Dear {clientName}, This is a reminder from {companyName}. Your rental of {itemName} is overdue by {overdueDays} days. Current overdue charge: LKR {overdueCharge}. Please return the item immediately.';
+      if (!settings.smsOverdueReminderTemplate || settings.smsOverdueReminderTemplate === oldDefault) {
+        settings.smsOverdueReminderTemplate = 'Dear {clientName}, This is a reminder from {companyName}. Your rental of {itemName} is overdue by {overdueDays} days. Added rent: LKR {dailyRate} per day. Total overdue: LKR {overdueCharge}. Please return the item immediately.';
+        await settings.save();
+      }
+    }
     const enableOverdue = settings?.enableOverdueCharges !== false;
     if (!enableOverdue) {
       return res.json({ message: 'Overdue charges are disabled in settings.', processed: 0 });
@@ -1405,14 +1412,8 @@ router.post('/process-overdue-charges', authMiddleware, async (req, res) => {
         }
         if (today > expectedReturn) {
           const overdueDays = Math.ceil((today - expectedReturn) / (1000 * 60 * 60 * 24));
-          // Determine charge rate: custom tool rate > default rate
-          let chargeRate = defaultRate;
-          if (isValidObjectId(item.tool)) {
-            try {
-              const toolDoc = await Tool.findById(item.tool).select('customOverdueChargePerDay').lean();
-              if (toolDoc?.customOverdueChargePerDay != null) chargeRate = toolDoc.customOverdueChargePerDay;
-            } catch (_) {}
-          }
+          // Use daily rent amount (dailyRate) as the charge rate for each late day
+          let chargeRate = Number(item.dailyRate) || defaultRate;
           item.overdueDays = overdueDays;
           item.overdueChargePerDay = chargeRate;
           item.totalOverdueCharge = overdueDays * chargeRate * (totalQty - returnedQty);
@@ -1435,13 +1436,8 @@ router.post('/process-overdue-charges', authMiddleware, async (req, res) => {
         }
         if (today > expectedReturn) {
           const overdueDays = Math.ceil((today - expectedReturn) / (1000 * 60 * 60 * 24));
-          let chargeRate = defaultRate;
-          if (isValidObjectId(acc.accessory)) {
-            try {
-              const accDoc = await Accessory.findById(acc.accessory).select('customOverdueChargePerDay').lean();
-              if (accDoc?.customOverdueChargePerDay != null) chargeRate = accDoc.customOverdueChargePerDay;
-            } catch (_) {}
-          }
+          // Use daily rent amount (price) as the charge rate for each late day
+          let chargeRate = Number(acc.price) || defaultRate;
           acc.overdueDays = overdueDays;
           acc.overdueChargePerDay = chargeRate;
           acc.totalOverdueCharge = overdueDays * chargeRate * (totalQty - returnedQty);
@@ -1462,9 +1458,8 @@ router.post('/process-overdue-charges', authMiddleware, async (req, res) => {
         await booking.save();
         processed++;
 
-        // Send overdue SMS only within the first N days (default 4); charges still accumulate after that
-        const maxSmsDays = Number(settings?.overdueSmsMaxDays) || 4;
-        if (booking.clientPhone && bookingTotalOverdueDays > 0 && bookingTotalOverdueDays <= maxSmsDays) {
+        // Send overdue SMS for all late days
+        if (booking.clientPhone && bookingTotalOverdueDays > 0) {
           const lastSmsSent = booking.followupSentAt ? new Date(booking.followupSentAt) : null;
           const shouldSend = !lastSmsSent || (today - lastSmsSent) > (23 * 60 * 60 * 1000);
           if (shouldSend && bookingTotalOverdueDays > 0) {
@@ -1474,12 +1469,18 @@ router.post('/process-overdue-charges', authMiddleware, async (req, res) => {
                 ...(booking.accessories || []).filter(ac => ac.returnStatus === 'Overdue')
               ];
               const itemNames = overdueItems.map(it => it.toolNumber || it.name || 'Item').join(', ');
-              let template = settings?.smsOverdueReminderTemplate || 'Dear {clientName}, your rental of {itemName} is overdue by {overdueDays} days. Overdue charge: LKR {overdueCharge}. Please return immediately.';
+              const dailyOverdueRate = overdueItems.reduce((sum, it) => {
+                const rate = Number(it.dailyRate) || Number(it.price) || 0;
+                const qty = (it.quantity || 1) - (it.returnedQuantity || 0);
+                return sum + (rate * qty);
+              }, 0);
+              let template = settings?.smsOverdueReminderTemplate || 'Dear {clientName}, your rental of {itemName} is overdue by {overdueDays} days. Added rent: LKR {dailyRate} per day. Total overdue: LKR {overdueCharge}. Please return immediately.';
               const msg = template
                 .replace(/\{clientName\}/g, booking.clientName || 'Customer')
                 .replace(/\{companyName\}/g, settings?.companyName || 'MAGGI TOOL RENTALS')
                 .replace(/\{itemName\}/g, itemNames)
                 .replace(/\{overdueDays\}/g, String(bookingTotalOverdueDays))
+                .replace(/\{dailyRate\}/g, `LKR ${dailyOverdueRate.toLocaleString()}`)
                 .replace(/\{overdueCharge\}/g, `LKR ${bookingTotalOverdueCharges.toLocaleString()}`);
               const result = await sendSMS(booking.clientPhone, msg);
               if (result.success) {

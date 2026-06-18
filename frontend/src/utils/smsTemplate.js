@@ -53,11 +53,11 @@ export const SMS_PLACEHOLDER_GROUPS = [
   },
   {
     title: 'Amounts',
-    keys: ['{transport}', '{otherCharges}', '{deposit}', '{discount}', '{totalAmount}', '{advancePayment}', '{balanceAmount}']
+    keys: ['{transport}', '{otherCharges}', '{deposit}', '{discount}', '{totalAmount}', '{advancePayment}', '{balanceAmount}', '{dailyRate}', '{overdueCharge}']
   },
   {
     title: 'Other',
-    keys: ['{companyName}', '{billLink}']
+    keys: ['{companyName}', '{billLink}', '{overdueDays}']
   },
   {
     title: 'Advance Payment',

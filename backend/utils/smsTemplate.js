@@ -46,7 +46,7 @@ const SMS_PLACEHOLDERS = [
   '{toolNo}', '{itemsBreakdown}', '{accessoriesLine}', '{notesLine}',
   '{transport}', '{otherCharges}', '{deposit}', '{discount}',
   '{totalAmount}', '{advancePayment}', '{balanceAmount}', '{companyName}',
-  '{billLink}', '{detailedBill}'
+  '{billLink}', '{detailedBill}', '{dailyRate}', '{overdueDays}', '{overdueCharge}'
 ];
 
 function fmtMoney(v) {

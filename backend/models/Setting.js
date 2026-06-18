@@ -29,7 +29,7 @@ const settingSchema = new mongoose.Schema({
   defaultOverdueChargePerDay: { type: Number, default: 500 },
   smsOverdueReminderTemplate: {
     type: String,
-    default: 'Dear {clientName}, This is a reminder from {companyName}. Your rental of {itemName} is overdue by {overdueDays} days. Current overdue charge: LKR {overdueCharge}. Please return the item immediately.'
+    default: 'Dear {clientName}, This is a reminder from {companyName}. Your rental of {itemName} is overdue by {overdueDays} days. Added rent: LKR {dailyRate} per day. Total overdue: LKR {overdueCharge}. Please return the item immediately.'
   }
 }, { timestamps: true });
 

@@ -78,7 +78,7 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
     
     if (actRetDate > expRetDate) {
       const overdueDays = Math.ceil((actRetDate - expRetDate) / (1000 * 60 * 60 * 24));
-      const penaltyRate = Number(originalItemObj?.overdueChargePerDay) || 500;
+      const penaltyRate = Number(row.dailyRate) || Number(originalItemObj?.overdueChargePerDay) || 500;
       cost += (overdueDays * penaltyRate * qty);
     }
     
