@@ -27,7 +27,7 @@ const getDynamicSettings = async () => {
 
 export const generateGenericReportPDF = async (title, columns, data, orientation = 'p') => {
   const settings = await getDynamicSettings();
-  const activeLogo = settings.logo || logoUrl;
+  const activeLogo = logoUrl;
   
   try {
     const doc = new jsPDF(orientation, 'mm', 'a4');

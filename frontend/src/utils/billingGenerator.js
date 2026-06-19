@@ -151,7 +151,7 @@ const getDynamicSettings = async () => {
 
 export const generateInvoicePDF = async (invoice, mode = 'download') => {
   const settings = await getDynamicSettings();
-  const activeLogo = settings.logo || logoUrl;
+  const activeLogo = logoUrl;
   
   console.log('RAXWO Debug: Starting PDF generation for:', invoice.invoiceNo);
   try {
@@ -377,7 +377,7 @@ export const generateInvoicePDF = async (invoice, mode = 'download') => {
 
 export const generateQuotationPDF = async (quote, mode = 'download') => {
   const settings = await getDynamicSettings();
-  const activeLogo = settings.logo || logoUrl;
+  const activeLogo = logoUrl;
   try {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
