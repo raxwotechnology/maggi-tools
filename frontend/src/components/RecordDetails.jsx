@@ -59,7 +59,7 @@ const QuotationDocumentView = ({ data }) => {
           <div className="brand-box">
             <img src={activeLogo} alt="Company Logo" className="brand-logo" />
             <div className="brand-details">
-              <h1 className="company-title">{companyName}</h1>
+              {/* Company name removed as it is now baked into the logo image */}
               <div className="company-contact-row">
                 <MapPin size={12} /> <span>{companyAddress}</span>
               </div>

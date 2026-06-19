@@ -158,27 +158,31 @@ export const generateInvoicePDF = async (invoice, mode = 'download') => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
 
-    // Add Logo (supports PNG/JPEG data URLs)
+    // Add Logo (supports PNG/JPEG data URLs or local files)
     try {
       const normalized = normalizeLogoForJsPDF(activeLogo);
       if (normalized?.data) {
-        doc.addImage(normalized.data, normalized.format, 15, 20, 35, 35);
+        doc.addImage(normalized.data, normalized.format, 15, 15, 45, 45);
+      } else {
+        const img = new Image();
+        img.src = logoUrl;
+        await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
+        doc.addImage(img, 'PNG', 15, 15, 45, 45);
       }
     } catch (e) {
       console.warn("Logo skipped or format invalid");
     }
 
-    // Print Company Name
-    doc.setFontSize(20);
+    // Print Contact Info in header aligned right
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...THEME.primary);
-    doc.text(settings.name || 'MAGGI TOOL RENTALS', 55, 35);
+    doc.text('CONTACT US', pageWidth - 15, 30, { align: 'right' });
     
-    // Print Contact Number in header optionally
-    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100);
-    doc.text(`Contact: ${(settings.phones && settings.phones[0]) || '0777778845'}`, 55, 42);
+    doc.text(`${(settings.phones && settings.phones.join(' | ')) || '0777778845'}`, pageWidth - 15, 36, { align: 'right' });
+    doc.text(`${settings.email || ''}`, pageWidth - 15, 42, { align: 'right' });
 
     const drawDynamicHeader = (doc, title) => {
       drawSidePattern(doc);
@@ -385,7 +389,7 @@ export const generateQuotationPDF = async (quote, mode = 'download') => {
     try {
       const normalized = normalizeLogoForJsPDF(activeLogo);
       if (normalized?.data) {
-        doc.addImage(normalized.data, normalized.format, 15, 20, 35, 35);
+        doc.addImage(normalized.data, normalized.format, 15, 15, 45, 45);
       } else {
         const img = new Image();
         img.src = logoUrl;
@@ -393,23 +397,22 @@ export const generateQuotationPDF = async (quote, mode = 'download') => {
           img.onload = resolve; 
           img.onerror = resolve; 
         });
-        doc.addImage(img, 'PNG', 15, 20, 35, 35);
+        doc.addImage(img, 'PNG', 15, 15, 45, 45);
       }
     } catch (e) {
       console.warn("Logo skipped or format invalid");
     }
 
-    // Print Company Name
-    doc.setFontSize(20);
+    // Print Contact Info in header aligned right
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...THEME.primary);
-    doc.text(settings.name || 'MAGGI TOOL RENTALS', 55, 35);
+    doc.text('CONTACT US', pageWidth - 15, 30, { align: 'right' });
     
-    // Print Contact Number in header optionally
-    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100);
-    doc.text(`Contact: ${(settings.phones && settings.phones[0]) || '0777778845'}`, 55, 42);
+    doc.text(`${(settings.phones && settings.phones.join(' | ')) || '0777778845'}`, pageWidth - 15, 36, { align: 'right' });
+    doc.text(`${settings.email || ''}`, pageWidth - 15, 42, { align: 'right' });
 
     drawHeader(doc, 'Service Quotation');
 

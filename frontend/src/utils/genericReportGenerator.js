@@ -36,19 +36,22 @@ export const generateGenericReportPDF = async (title, columns, data, orientation
 
     // 1. Header Section
     try {
-      doc.addImage(activeLogo, 'PNG', 15, 10, 25, 25);
+      const img = new Image();
+      img.src = activeLogo;
+      await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
+      doc.addImage(img, 'PNG', 15, 10, 40, 40);
     } catch (e) { console.warn("Logo skipped"); }
 
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
     doc.setTextColor(...THEME.primary);
-    doc.text(settings.companyName.toUpperCase(), 45, 18);
+    doc.text('CONTACT US', pageWidth - 15, 20, { align: 'right' });
     
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100);
-    doc.text(settings.address || '', 45, 23);
-    doc.text(`Phone: ${settings.phone} | Email: ${settings.email}`, 45, 27);
+    doc.text(settings.address || '', pageWidth - 15, 25, { align: 'right' });
+    doc.text(`Phone: ${settings.phone} | Email: ${settings.email}`, pageWidth - 15, 30, { align: 'right' });
 
     // 2. Report Title & Date
     doc.setDrawColor(...THEME.primary);
