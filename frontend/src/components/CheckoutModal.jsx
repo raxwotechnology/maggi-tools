@@ -38,7 +38,7 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
           returningQty: 0,
           date: todayStr,
         };
-      }).filter(it => it.maxQty > 0);
+      });
 
       const accs = (bookingRecord.accessories || []).map(ac => {
         const pendingQty = (ac.quantity || 1) - (ac.returnedQuantity || 0);
@@ -51,7 +51,7 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
           returningQty: 0,
           date: todayStr,
         };
-      }).filter(ac => ac.maxQty > 0);
+      });
 
       setItemRows(items);
       setAccRows(accs);
@@ -101,10 +101,14 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
   const remainingBalance = Math.max(0, calculatedTotal - alreadyPaid);
 
   // ── Submit ─────────────────────────────────────────────────
-  const handleSubmit = async () => {
+  const handleSubmit = async (overridePaymentAmount) => {
     if (!bookingRecord) return;
     setLoading(true);
     try {
+      const finalPayment = typeof overridePaymentAmount === 'number' 
+        ? overridePaymentAmount 
+        : (paymentAmount !== '' ? Number(paymentAmount) : undefined);
+        
       const payload = {
         returnedItems: itemRows.map(it => ({
           id: it.id,
@@ -116,7 +120,7 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
           quantity: Number(ac.returningQty),
           date: ac.date,
         })),
-        paymentAmount: paymentAmount !== '' ? Number(paymentAmount) : undefined,
+        paymentAmount: finalPayment,
         paymentMethod,
         accountId,
       };
@@ -125,6 +129,34 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
       onClose();
     } catch (err) {
       alert('Failed to process. ' + (err.response?.data?.message || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleItemReturnWithoutPayment = async (targetId, isAccessory = false) => {
+    if (!bookingRecord) return;
+    setLoading(true);
+    try {
+      const payload = {
+        returnedItems: isAccessory ? [] : [{
+          id: targetId,
+          quantity: itemRows.find(i => i.id === targetId)?.maxQty || 1,
+          date: new Date().toISOString().split('T')[0]
+        }],
+        returnedAccessories: !isAccessory ? [] : [{
+          id: targetId,
+          quantity: accRows.find(a => a.id === targetId)?.maxQty || 1,
+          date: new Date().toISOString().split('T')[0]
+        }],
+        paymentAmount: 0,
+        paymentMethod,
+        accountId,
+      };
+      const res = await api.put(`/bookings/${bookingRecord._id}/partial-return`, payload);
+      if (onComplete) onComplete(res.data);
+    } catch (err) {
+      alert('Failed to return item. ' + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
@@ -210,8 +242,24 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+              
+              {it.maxQty === 0 ? (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+                  <span style={{ 
+                    background: remainingBalance > 0 ? 'var(--danger-soft)' : 'var(--success-soft)', 
+                    color: remainingBalance > 0 ? 'var(--danger)' : 'var(--success)', 
+                    padding: '6px 12px', 
+                    borderRadius: '6px', 
+                    fontWeight: 700, 
+                    fontSize: '0.85rem',
+                    border: `1px solid ${remainingBalance > 0 ? 'var(--danger)' : 'var(--success)'}`
+                  }}>
+                    {remainingBalance > 0 ? 'Returned W/O Pay' : '✅ Returned'}
+                  </span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <label style={{ fontSize: '0.82rem', margin: 0, color: 'var(--text-dim)' }}>Return Date:</label>
                     <input
@@ -243,33 +291,53 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
                   </div>
                 </div>
                 
-                <button
-                  type="button"
-                  onClick={() => {
-                    const copy = [...itemRows];
-                    if (it.returningQty === it.maxQty) {
-                      copy[idx].returningQty = 0;
-                    } else {
-                      copy[idx].date = new Date().toISOString().split('T')[0];
-                      copy[idx].returningQty = it.maxQty;
-                    }
-                    setItemRows(copy);
-                  }}
-                  style={{
-                    padding: '6px 12px',
-                    background: it.returningQty === it.maxQty ? 'var(--success-soft)' : 'var(--accent-soft)',
-                    color: it.returningQty === it.maxQty ? 'var(--success)' : 'var(--accent)',
-                    border: `1px solid ${it.returningQty === it.maxQty ? 'var(--success)' : 'var(--accent-border)'}`,
-                    borderRadius: '6px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    minWidth: '130px'
-                  }}
-                >
-                  {it.returningQty === it.maxQty ? '✅ Returned' : 'Mark as Returned'}
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleItemReturnWithoutPayment(it.id, false)}
+                    disabled={loading}
+                    style={{
+                      padding: '6px 12px',
+                      background: 'transparent',
+                      color: 'var(--danger)',
+                      border: '1px solid var(--danger)',
+                      borderRadius: '6px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    Return W/O Pay
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const copy = [...itemRows];
+                      if (it.returningQty === it.maxQty) {
+                        copy[idx].returningQty = 0;
+                      } else {
+                        copy[idx].date = new Date().toISOString().split('T')[0];
+                        copy[idx].returningQty = it.maxQty;
+                      }
+                      setItemRows(copy);
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      background: it.returningQty === it.maxQty ? 'var(--success-soft)' : 'var(--accent-soft)',
+                      color: it.returningQty === it.maxQty ? 'var(--success)' : 'var(--accent)',
+                      border: `1px solid ${it.returningQty === it.maxQty ? 'var(--success)' : 'var(--accent-border)'}`,
+                      borderRadius: '6px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      minWidth: '130px'
+                    }}
+                  >
+                    {it.returningQty === it.maxQty ? '✅ Returned' : 'Mark as Returned'}
+                  </button>
+                </div>
               </div>
             </div>
           );
@@ -332,67 +400,103 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <label style={{ fontSize: '0.82rem', margin: 0, color: 'var(--text-dim)' }}>Return Date:</label>
-                    <input
-                      type="date"
-                      value={ac.date}
-                      onChange={e => {
-                        const copy = [...accRows];
-                        copy[idx] = { ...copy[idx], date: e.target.value };
-                        setAccRows(copy);
-                      }}
-                      style={{ padding: '4px 6px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '0.85rem' }}
-                    />
+              {ac.maxQty === 0 ? (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+                  <span style={{ 
+                    background: remainingBalance > 0 ? 'var(--danger-soft)' : 'var(--success-soft)', 
+                    color: remainingBalance > 0 ? 'var(--danger)' : 'var(--success)', 
+                    padding: '6px 12px', 
+                    borderRadius: '6px', 
+                    fontWeight: 700, 
+                    fontSize: '0.85rem',
+                    border: `1px solid ${remainingBalance > 0 ? 'var(--danger)' : 'var(--success)'}`
+                  }}>
+                    {remainingBalance > 0 ? 'Returned W/O Pay' : '✅ Returned'}
+                  </span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <label style={{ fontSize: '0.82rem', margin: 0, color: 'var(--text-dim)' }}>Return Date:</label>
+                      <input
+                        type="date"
+                        value={ac.date}
+                        onChange={e => {
+                          const copy = [...accRows];
+                          copy[idx] = { ...copy[idx], date: e.target.value };
+                          setAccRows(copy);
+                        }}
+                        style={{ padding: '4px 6px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '0.85rem' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <label style={{ fontSize: '0.82rem', margin: 0, color: 'var(--text-dim)' }}>Qty:</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max={ac.maxQty}
+                        value={ac.returningQty}
+                        onChange={e => {
+                          const v = Math.min(ac.maxQty, Math.max(0, Number(e.target.value)));
+                          const copy = [...accRows];
+                          copy[idx] = { ...copy[idx], returningQty: v };
+                          setAccRows(copy);
+                        }}
+                        style={{ width: '65px', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '0.85rem' }}
+                      />
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <label style={{ fontSize: '0.82rem', margin: 0, color: 'var(--text-dim)' }}>Qty:</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max={ac.maxQty}
-                      value={ac.returningQty}
-                      onChange={e => {
-                        const v = Math.min(ac.maxQty, Math.max(0, Number(e.target.value)));
+                  
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleItemReturnWithoutPayment(ac.id, true)}
+                      disabled={loading}
+                      style={{
+                        padding: '6px 12px',
+                        background: 'transparent',
+                        color: 'var(--danger)',
+                        border: '1px solid var(--danger)',
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      Return W/O Pay
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
                         const copy = [...accRows];
-                        copy[idx] = { ...copy[idx], returningQty: v };
+                        if (ac.returningQty === ac.maxQty) {
+                          copy[idx].returningQty = 0;
+                        } else {
+                          copy[idx].date = new Date().toISOString().split('T')[0];
+                          copy[idx].returningQty = ac.maxQty;
+                        }
                         setAccRows(copy);
                       }}
-                      style={{ width: '65px', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '0.85rem' }}
-                    />
+                      style={{
+                        padding: '6px 12px',
+                        background: ac.returningQty === ac.maxQty ? 'var(--success-soft)' : 'var(--accent-soft)',
+                        color: ac.returningQty === ac.maxQty ? 'var(--success)' : 'var(--accent)',
+                        border: `1px solid ${ac.returningQty === ac.maxQty ? 'var(--success)' : 'var(--accent-border)'}`,
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        minWidth: '130px'
+                      }}
+                    >
+                      {ac.returningQty === ac.maxQty ? '✅ Returned' : 'Mark as Returned'}
+                    </button>
                   </div>
                 </div>
-                
-                <button
-                  type="button"
-                  onClick={() => {
-                    const copy = [...accRows];
-                    if (ac.returningQty === ac.maxQty) {
-                      copy[idx].returningQty = 0;
-                    } else {
-                      copy[idx].date = new Date().toISOString().split('T')[0];
-                      copy[idx].returningQty = ac.maxQty;
-                    }
-                    setAccRows(copy);
-                  }}
-                  style={{
-                    padding: '6px 12px',
-                    background: ac.returningQty === ac.maxQty ? 'var(--success-soft)' : 'var(--accent-soft)',
-                    color: ac.returningQty === ac.maxQty ? 'var(--success)' : 'var(--accent)',
-                    border: `1px solid ${ac.returningQty === ac.maxQty ? 'var(--success)' : 'var(--accent-border)'}`,
-                    borderRadius: '6px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    minWidth: '130px'
-                  }}
-                >
-                  {ac.returningQty === ac.maxQty ? '✅ Returned' : 'Mark as Returned'}
-                </button>
-              </div>
+              )}
             </div>
           );
         })}
@@ -476,8 +580,18 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
         </div>
 
         <div className="modal-actions">
-          <button className="cancel-btn" onClick={onClose}>Cancel</button>
-          <button className="submit-btn" onClick={handleSubmit} disabled={loading}>
+          <button className="cancel-btn" onClick={onClose} disabled={loading}>Cancel</button>
+          
+          <button 
+            className="cancel-btn" 
+            style={{ borderColor: 'var(--danger)', color: 'var(--danger)', marginLeft: '8px' }} 
+            onClick={() => handleSubmit(0)} 
+            disabled={loading}
+          >
+            Return Without Payment
+          </button>
+
+          <button className="submit-btn" onClick={() => handleSubmit()} disabled={loading}>
             {loading ? 'Processing...' : 'Confirm Return & Pay'}
           </button>
         </div>

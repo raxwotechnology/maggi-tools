@@ -685,7 +685,11 @@ const RecordDetails = ({ data, type }) => {
           
           let statusBadge;
           if ((it.returnedQuantity || 0) >= (it.quantity || 1)) {
-            statusBadge = <span style={{ background: 'var(--success-soft)', color: 'var(--success)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>✓ RETURNED</span>;
+            if (data.balanceAmount > 0) {
+              statusBadge = <span style={{ background: 'var(--danger-soft)', color: 'var(--danger)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>✓ RETURNED (UNPAID)</span>;
+            } else {
+              statusBadge = <span style={{ background: 'var(--success-soft)', color: 'var(--success)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>✓ RETURNED</span>;
+            }
           } else if (diff > 0) {
             statusBadge = <span style={{ background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>{diff} DAYS LEFT</span>;
           } else if (diff === 0) {
@@ -732,7 +736,11 @@ const RecordDetails = ({ data, type }) => {
         
         let statusBadge;
         if ((a.returnedQuantity || 0) >= (a.quantity || 1)) {
-          statusBadge = <span style={{ background: 'var(--success-soft)', color: 'var(--success)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>✓ RETURNED</span>;
+          if (data.balanceAmount > 0) {
+            statusBadge = <span style={{ background: 'var(--danger-soft)', color: 'var(--danger)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>✓ RETURNED (UNPAID)</span>;
+          } else {
+            statusBadge = <span style={{ background: 'var(--success-soft)', color: 'var(--success)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>✓ RETURNED</span>;
+          }
         } else if (diff > 0) {
           statusBadge = <span style={{ background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>{diff} DAYS LEFT</span>;
         } else if (diff === 0) {

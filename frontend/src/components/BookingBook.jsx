@@ -147,7 +147,12 @@ const BookingBook = ({ setActiveTab }) => {
 
   const filteredRecords = useMemo(() => {
     return bookings.filter(r => {
-      const matchStatus = statusFilter === 'All' || r.status === statusFilter;
+      let matchStatus = true;
+      if (statusFilter === 'Returned (Unpaid)') {
+        matchStatus = r.status === 'Returned' && (r.balanceAmount || 0) > 0;
+      } else if (statusFilter !== 'All') {
+        matchStatus = r.status === statusFilter;
+      }
       
       let matchPayment = true;
       if (paymentFilter === 'Paid') {
@@ -535,7 +540,7 @@ const BookingBook = ({ setActiveTab }) => {
         {/* ─ Row 2: Status & Payment Tabs ─ */}
         <div className="bf-tabs-row">
           <div className="tab-switcher" style={{ margin: 0 }}>
-            {['All', 'Confirmed', 'Active', 'Returned', 'Cancelled', 'Completed'].map(s => (
+            {['All', 'Confirmed', 'Active', 'Returned', 'Returned (Unpaid)', 'Cancelled', 'Completed'].map(s => (
               <button key={s} onClick={() => setStatusFilter(s)} className={statusFilter === s ? 'active-tab' : ''}>
                 {s}
               </button>
@@ -623,33 +628,40 @@ const BookingBook = ({ setActiveTab }) => {
                   Paid
                 </span>
               ) : (
-                <select
-                  value={r.displayStatus || 'Confirmed'}
-                  onChange={async (e) => {
-                    e.stopPropagation();
-                    try {
-                      await bookingAPI.update(r._id, { status: e.target.value });
-                      fetchBookings();
-                    } catch (err) { alert('Failed to update status.'); }
-                  }}
-                  onClick={e => e.stopPropagation()}
-                  style={{
-                    border: 'none', borderRadius: '8px', padding: '5px 10px',
-                    fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer',
-                    background: r.displayStatus === 'Active' ? '#fef08a'
-                      : r.displayStatus === 'Returned' ? 'var(--success-soft)'
-                      : r.displayStatus === 'Cancelled' ? '#fee2e2' : 'var(--bg-side)',
-                    color: r.displayStatus === 'Active' ? '#854d0e'
-                      : r.displayStatus === 'Returned' ? 'var(--success)'
-                      : r.displayStatus === 'Cancelled' ? 'var(--danger)' : 'var(--text-main)'
-                  }}
-                >
-                  <option value="Confirmed">Confirmed</option>
-                  <option value="Active">Active</option>
-                  <option value="Returned">Returned</option>
-                  <option value="Cancelled">Cancelled</option>
-                  <option value="Completed">Completed</option>
-                </select>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                  <select
+                    value={r.displayStatus || 'Confirmed'}
+                    onChange={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await bookingAPI.update(r._id, { status: e.target.value });
+                        fetchBookings();
+                      } catch (err) { alert('Failed to update status.'); }
+                    }}
+                    onClick={e => e.stopPropagation()}
+                    style={{
+                      border: 'none', borderRadius: '8px', padding: '5px 10px',
+                      fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer',
+                      background: r.displayStatus === 'Active' ? '#fef08a'
+                        : r.displayStatus === 'Returned' ? 'var(--success-soft)'
+                        : r.displayStatus === 'Cancelled' ? '#fee2e2' : 'var(--bg-side)',
+                      color: r.displayStatus === 'Active' ? '#854d0e'
+                        : r.displayStatus === 'Returned' ? 'var(--success)'
+                        : r.displayStatus === 'Cancelled' ? 'var(--danger)' : 'var(--text-main)'
+                    }}
+                  >
+                    <option value="Confirmed">Confirmed</option>
+                    <option value="Active">Active</option>
+                    <option value="Returned">Returned</option>
+                    <option value="Cancelled">Cancelled</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                  {r.displayStatus === 'Returned' && (
+                    <span style={{ color: 'var(--danger)', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                      (Unpaid)
+                    </span>
+                  )}
+                </div>
               )
             ),
             ACTION: (
@@ -757,9 +769,14 @@ const BookingBook = ({ setActiveTab }) => {
         onClose={() => setReturnModalOpen(false)}
         bookingRecord={returnRecord}
         accounts={accounts}
-        onComplete={() => {
+        onComplete={(updatedRecord) => {
           setSuccess('Processed successfully.');
           fetchBookings();
+          if (updatedRecord && updatedRecord._id) {
+            setReturnRecord(updatedRecord);
+          } else {
+            setReturnModalOpen(false);
+          }
           setTimeout(() => setSuccess(null), 3000);
         }}
       />
