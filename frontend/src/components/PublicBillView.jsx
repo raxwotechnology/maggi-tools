@@ -111,7 +111,7 @@ const PublicBillView = ({ token }) => {
         <div style={styles.header}>
           <div style={styles.headerAccent} />
           <div style={styles.headerContent}>
-            <div style={styles.companyName}>{companyName || 'MAGGI TOOL RENTALS'}</div>
+            <div style={styles.companyName}>{companyName || 'MAGGI TOOLS'}</div>
             <div style={styles.companySubtitle}>Official Rental Receipt</div>
             {contactDisplay && (
               <div style={styles.contactLine}>📞 {contactDisplay}</div>
@@ -245,7 +245,7 @@ const PublicBillView = ({ token }) => {
         {/* ── Footer ── */}
         <div style={styles.footer}>
           <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1e293b', marginBottom: 4 }}>
-            {companyName || 'MAGGI TOOL RENTALS'}
+            {companyName || 'MAGGI TOOLS'}
           </div>
           {contactDisplay && <div style={{ marginBottom: 4 }}>📞 {contactDisplay}</div>}
           <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 8 }}>

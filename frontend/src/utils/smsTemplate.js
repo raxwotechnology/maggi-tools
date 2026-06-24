@@ -193,14 +193,14 @@ export function isLegacyShortTemplate(template) {
   return t.length < 120 && t.includes('Dear {clientName}');
 }
 
-export function resolveBookingTemplate(stored, companyName = 'MAGGI TOOL RENTALS') {
+export function resolveBookingTemplate(stored, companyName = 'MAGGI TOOLS') {
   if (isLegacyShortTemplate(stored)) {
     return DEFAULT_SMS_BOOKING_TEMPLATE.replace(/\{companyName\}/g, companyName);
   }
   return migrateBookingTemplate(stored).replace(/\{companyName\}/g, companyName);
 }
 
-export function previewSmsTemplate(template, companyName = 'MAGGI TOOL RENTALS') {
+export function previewSmsTemplate(template, companyName = 'MAGGI TOOLS') {
   const booking = { ...SAMPLE_BOOKING };
   const itemsList = booking.items || [];
   const accList = booking.accessories || [];
@@ -249,7 +249,7 @@ export function previewSmsTemplate(template, companyName = 'MAGGI TOOL RENTALS')
 }
 
 export function previewAdvanceSmsTemplate(template, settings = {}) {
-  const companyName = 'MAGGI TOOL RENTALS';
+  const companyName = 'MAGGI TOOLS';
   const billLink = 'View Bill: https://maggi-tools.netlify.app/bill/sample-token';
   let result = (template && template.trim()) ? template.trim() : DEFAULT_SMS_ADVANCE_TEMPLATE;
   const replacements = {

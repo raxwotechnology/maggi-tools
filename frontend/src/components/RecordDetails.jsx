@@ -26,7 +26,7 @@ const QuotationDocumentView = ({ data }) => {
   if (!data) return null;
 
   const activeLogo = logoUrl;
-  const companyName = settings?.name || 'MAGGI TOOL RENTALS';
+  const companyName = settings?.name || 'MAGGI TOOLS';
   const companyAddress = settings?.address || 'No. 241, Rajamaha Vihara Rd, Mirihana, Kotte.';
   const companyEmail = settings?.email || 'info@raxwo.com';
   const companyPhones = settings?.phones || ['+94 775 085 815', '+94 723 627 888', '+94 766 779 603'];

@@ -5,7 +5,7 @@ import { amountToWords } from './numberToWords';
 import api from '../services/api';
 
 const COMPANY_DETAILS = {
-  name: 'MAGGI TOOL RENTALS',
+  name: 'MAGGI TOOLS',
   address: 'No. 241, Rajamaha Vihara Rd, Mirihana, Kotte.',
   phones: ['+94 775 085 815', '+94 723 627 888', '+94 766 779 603'],
   email: 'info@raxwo.com',
@@ -151,7 +151,7 @@ const getDynamicSettings = async () => {
 
 export const generateInvoicePDF = async (invoice, mode = 'download') => {
   const settings = await getDynamicSettings();
-  const activeLogo = settings?.logo || logoUrl;
+  const activeLogo = logoUrl;
   
   console.log('RAXWO Debug: Starting PDF generation for:', invoice.invoiceNo);
   try {
@@ -381,7 +381,7 @@ export const generateInvoicePDF = async (invoice, mode = 'download') => {
 
 export const generateQuotationPDF = async (quote, mode = 'download') => {
   const settings = await getDynamicSettings();
-  const activeLogo = settings?.logo || logoUrl;
+  const activeLogo = logoUrl;
   try {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;

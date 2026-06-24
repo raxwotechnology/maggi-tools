@@ -81,6 +81,7 @@ router.post('/', async (req, res) => {
       req.body.invoiceNo = `RT-INV-${year}-${seq.toString().padStart(4, '0')}`;
     }
 
+    if (req.body.accountId === '') req.body.accountId = null;
     const newInvoice = new Invoice({
       ...req.body,
       updatedBy: req.user.id,
@@ -115,6 +116,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       updatedBy: req.user.id,
       updatedByName: req.user.name
     };
+    if (updateData.accountId === '') updateData.accountId = null;
     const updated = await Invoice.findByIdAndUpdate(req.params.id, updateData, { new: true });
     if (updated) {
       await syncToPaymentBook(updated);

@@ -339,6 +339,7 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
                   </button>
                 </div>
               </div>
+              )}
             </div>
           );
         })}

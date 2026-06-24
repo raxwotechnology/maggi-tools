@@ -18,7 +18,7 @@ const getDynamicSettings = async () => {
     return res.data;
   } catch (e) { console.warn('Settings fetch failed, using defaults'); }
   return {
-    companyName: 'MAGGI TOOL RENTALS',
+    companyName: 'MAGGI TOOLS',
     address: 'No. 241, Rajamaha Vihara Rd, Mirihana, Kotte.',
     phone: '+94 775 085 815',
     email: 'info@maggitoolrentals.com'

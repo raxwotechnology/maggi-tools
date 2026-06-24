@@ -135,7 +135,9 @@ const InvoiceForm = ({ onSubmit, onCancel, initialData }) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await onSubmit({ ...formData, totalAmount: calcTotal(formData) });
+      const finalData = { ...formData, totalAmount: calcTotal(formData) };
+      if (!finalData.accountId) delete finalData.accountId;
+      await onSubmit(finalData);
     } finally {
       setSubmitting(false);
     }

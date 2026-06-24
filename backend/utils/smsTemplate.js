@@ -60,7 +60,7 @@ function fmtOptionalMoney(v) {
 }
 
 function getCompanyName(settings) {
-  return 'MAGGI TOOL RENTALS';
+  return 'MAGGI TOOLS';
 }
 
 function normalizeSmsText(text) {
