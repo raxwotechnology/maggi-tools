@@ -1,10 +1,47 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import './DataTable.css';
 
 const DataTable = ({ columns, data, emptyMessage, loading, onRowClick }) => {
+  const scrollRef = useRef(null);
+  const isDown = useRef(false);
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
+
+  const handleMouseDown = (e) => {
+    isDown.current = true;
+    scrollRef.current.classList.add('is-dragging');
+    startX.current = e.pageX - scrollRef.current.offsetLeft;
+    scrollLeft.current = scrollRef.current.scrollLeft;
+  };
+
+  const handleMouseLeave = () => {
+    isDown.current = false;
+    scrollRef.current.classList.remove('is-dragging');
+  };
+
+  const handleMouseUp = () => {
+    isDown.current = false;
+    scrollRef.current.classList.remove('is-dragging');
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDown.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX.current) * 1.5; // Scroll speed
+    scrollRef.current.scrollLeft = scrollLeft.current - walk;
+  };
+
   return (
-    <div className="table-wrapper">
-      <div className="data-table-root">
+    <div className="table-wrapper" style={{ position: 'relative' }}>
+      <div 
+        className="data-table-root"
+        ref={scrollRef}
+        onMouseDown={handleMouseDown}
+        onMouseLeave={handleMouseLeave}
+        onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove}
+      >
         <table className="data-table">
           <thead>
             <tr>

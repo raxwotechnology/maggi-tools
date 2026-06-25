@@ -11,6 +11,17 @@
 .data-table-root {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  transition: cursor 0.2s ease;
+  user-select: none;
+  cursor: grab;
+}
+
+.data-table-root.is-dragging {
+  cursor: grabbing !important;
+}
+
+.data-table-root.is-dragging .data-table {
+  pointer-events: none;
 }
 
 /* ── Table ── */

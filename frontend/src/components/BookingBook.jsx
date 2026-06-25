@@ -693,54 +693,54 @@ const BookingBook = ({ setActiveTab }) => {
                     )}
                     {canManage && (
                       <>
-                    <button
-                      type="button"
-                      className="action-icon-btn btn-print"
-                      onClick={(e) => { e.stopPropagation(); handlePrint(r.rawData); }}
-                      title="Print Bill"
-                    >
-                      <Printer />
-                    </button>
-                    <button
-                      type="button"
-                      className="action-icon-btn btn-details"
-                      onClick={(e) => { e.stopPropagation(); handlePrintQuote(r.rawData); }}
-                      title="Print Copy"
-                    >
-                      <FileText />
-                    </button>
-                    <button
-                      type="button"
-                      className="action-icon-btn btn-edit"
-                      onClick={(e) => { e.stopPropagation(); handleEdit(r); }}
-                      title="Edit"
-                    >
-                      <Edit />
-                    </button>
-                    {(r.status !== 'Draft' && r.status !== 'Cancelled') && (
-                      <button
-                        type="button"
-                        className="action-icon-btn btn-return"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const rec = r.rawData || r;
-                          setReturnRecord(rec);
-                          setReturnModalOpen(true);
-                        }}
-                        title="Mark Returned"
-                      >
-                        <Package size={16} />
-                      </button>
-                    )}
-                    <button type="button" className="action-icon-btn btn-bell" onClick={(e) => handleNotify(e, r)} title="SMS">
-                      <Bell />
-                    </button>
-                    <button type="button" className="action-icon-btn btn-msg" onClick={(e) => handleWhatsApp(e, r)} title="WhatsApp">
-                      <MessageCircle />
-                    </button>
-                    <button type="button" className="action-icon-btn btn-delete" onClick={(e) => { e.stopPropagation(); handleDelete(r._id); }} title="Delete">
-                      <Trash2 />
-                    </button>
+                        <button
+                          type="button"
+                          className="action-icon-btn btn-print"
+                          onClick={(e) => { e.stopPropagation(); handlePrint(r.rawData); }}
+                          title="Print Bill"
+                        >
+                          <Printer />
+                        </button>
+                        <button
+                          type="button"
+                          className="action-icon-btn btn-details"
+                          onClick={(e) => { e.stopPropagation(); handlePrintQuote(r.rawData); }}
+                          title="Print Copy"
+                        >
+                          <FileText />
+                        </button>
+                        <button
+                          type="button"
+                          className="action-icon-btn btn-edit"
+                          onClick={(e) => { e.stopPropagation(); handleEdit(r); }}
+                          title="Edit"
+                        >
+                          <Edit />
+                        </button>
+                        {(r.status !== 'Draft' && r.status !== 'Cancelled') && (
+                          <button
+                            type="button"
+                            className="action-icon-btn btn-return"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const rec = r.rawData || r;
+                              setReturnRecord(rec);
+                              setReturnModalOpen(true);
+                            }}
+                            title="Mark Returned"
+                          >
+                            <Package size={16} />
+                          </button>
+                        )}
+                        <button type="button" className="action-icon-btn btn-bell" onClick={(e) => handleNotify(e, r)} title="SMS">
+                          <Bell />
+                        </button>
+                        <button type="button" className="action-icon-btn btn-msg" onClick={(e) => handleWhatsApp(e, r)} title="WhatsApp">
+                          <MessageCircle />
+                        </button>
+                        <button type="button" className="action-icon-btn btn-delete" onClick={(e) => { e.stopPropagation(); handleDelete(r._id); }} title="Delete">
+                          <Trash2 />
+                        </button>
                       </>
                     )}
                   </div>
