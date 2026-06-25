@@ -289,23 +289,29 @@ export const generateInvoicePDF = async (invoice, mode = 'download') => {
         if (item.returnStatus === 'Overdue' && invoice.totalOverdueCharges > 0) {
            desc += ' [OVERDUE]';
         }
-        tableData.push([
-          desc,
-          `${itemDays} ${item.unitType || invoice.unitType || 'Days'} @ LKR ${itemRate.toLocaleString()}`
-        ]);
+        
+        let valString = `${itemDays} ${item.unitType || invoice.unitType || 'Days'} @ LKR ${itemRate.toLocaleString()}`;
+        if (item.amountPaid > 0 || item.amountDue > 0) {
+            valString += `\n(Paid: LKR ${(item.amountPaid || 0).toLocaleString()} | Due: LKR ${(item.amountDue || 0).toLocaleString()})`;
+        }
+        
+        tableData.push([desc, valString]);
       });
       if (invoice.jobDescription) {
         tableData.push(['General Description', invoice.jobDescription]);
       }
     }
 
-    // 3. Add Accessories
     if (invoice.accessories && invoice.accessories.length > 0) {
         invoice.accessories.forEach(acc => {
             const accQty = acc.quantity || 1;
+            let valString = `LKR ${(acc.price * accQty * invoiceDays).toLocaleString()}`;
+            if (acc.amountPaid > 0 || acc.amountDue > 0) {
+                valString += `\n(Paid: LKR ${(acc.amountPaid || 0).toLocaleString()} | Due: LKR ${(acc.amountDue || 0).toLocaleString()})`;
+            }
             tableData.push([
                 `${acc.number ? `[${acc.number}] ` : ''}Accessory: ${acc.name} (x${accQty}) for ${invoiceDays} days`, 
-                `LKR ${(acc.price * accQty * invoiceDays).toLocaleString()}`
+                valString
             ]);
         });
     }

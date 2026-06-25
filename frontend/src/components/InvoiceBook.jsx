@@ -390,12 +390,13 @@ const InvoiceBook = ({ initialTab }) => {
         {activeTab === 'Invoices' && (
           <>
             <DataTable
-              columns={['INV#', 'DATE', 'CLIENT', 'TOTAL', 'BALANCE', 'STATUS', 'ACTION']}
+              columns={['INV#', 'DATE', 'CLIENT', 'TOTAL', 'PAID', 'BALANCE', 'STATUS', 'ACTION']}
               data={formattedInvoices.map((r) => ({
                 'INV#': r.invoiceNo_disp,
                 'DATE': r.date_disp,
                 'CLIENT': r.clientName,
                 'TOTAL': r.TOTAL,
+                'PAID': <strong style={{ color: 'var(--success)' }}>{fmtMoney(r.advancePayment || 0)}</strong>,
                 'BALANCE': r.BALANCE,
                 'STATUS': r.status_disp,
                 'ACTION': r.action
@@ -438,11 +439,12 @@ const InvoiceBook = ({ initialTab }) => {
         <div style={{ padding: '20px' }}>
           <h4>Invoices</h4>
           <DataTable 
-            columns={['INV#', 'DATE', 'TOTAL', 'BALANCE', 'STATUS']}
+            columns={['INV#', 'DATE', 'TOTAL', 'PAID', 'BALANCE', 'STATUS']}
             data={formattedInvoices.filter(i => i.clientName === selectedClientName).map(r => ({
                'INV#': r.invoiceNo_disp,
                'DATE': r.date_disp,
                'TOTAL': r.TOTAL,
+               'PAID': <strong style={{ color: 'var(--success)' }}>{fmtMoney(r.advancePayment || 0)}</strong>,
                'BALANCE': r.BALANCE,
                'STATUS': r.status_disp,
             }))}

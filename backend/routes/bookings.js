@@ -869,7 +869,7 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
-    const { returnDate, returnedItems, returnedAccessories, paymentAmount, paymentMethod, accountId } = req.body;
+    const { returnDate, returnedItems, returnedAccessories, paidNotReturnedItems, paidNotReturnedAccessories, returnedWithoutPayItems, returnedWithoutPayAccessories, paymentAmount, paymentMethod, accountId } = req.body;
     const returnDateObj = new Date(returnDate || Date.now());
 
     let allFullyReturned = true;
@@ -878,6 +878,18 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
     if (booking.items && booking.items.length > 0) {
       for (const item of booking.items) {
         const returnedData = (returnedItems || []).find(r => String(r.id) === String(item._id));
+        const rwopData = (returnedWithoutPayItems || []).find(r => String(r.id) === String(item._id));
+        const pnrData = (paidNotReturnedItems || []).find(r => String(r.id) === String(item._id));
+        
+        const combinedData = pnrData || returnedData || rwopData;
+        if (combinedData && combinedData.amountPaid !== undefined) {
+           item.amountPaid = Number(combinedData.amountPaid) || 0;
+           const itemRate = Number(item.dailyRate) || 0;
+           const qty = Number(item.quantity) || 1;
+           const days = Number(item.rentalDays) || Number(booking.totalDays) || 1;
+           item.amountDue = Math.max(0, (itemRate * qty * days) - item.amountPaid);
+        }
+
         if (returnedData && returnedData.quantity > 0) {
           const qty = Number(returnedData.quantity);
           const itemDate = returnedData.date ? new Date(returnedData.date) : returnDateObj;
@@ -911,6 +923,50 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
             }
           }
         }
+        
+        // Returned W/O Pay
+        if (rwopData && rwopData.quantity > 0) {
+          const qty = Number(rwopData.quantity);
+          const itemDate = rwopData.date ? new Date(rwopData.date) : returnDateObj;
+          item.returnDates = item.returnDates || [];
+          item.returnDates.push({ quantity: qty, date: itemDate });
+          item.returnedQuantity = (item.returnedQuantity || 0) + qty;
+          
+          // Overdue calculation
+          const expectedRet = item.expectedReturnDate ? new Date(item.expectedReturnDate) : new Date(booking.returnDate);
+          expectedRet.setHours(0, 0, 0, 0);
+          const actRet = new Date(itemDate);
+          actRet.setHours(0, 0, 0, 0);
+          if (actRet > expectedRet) {
+            const overdueDays = Math.ceil((actRet - expectedRet) / (1000 * 60 * 60 * 24));
+            const penaltyRate = Number(item.dailyRate) || Number(item.overdueChargePerDay) || 500;
+            const penalty = overdueDays * penaltyRate * qty;
+            if (overdueDays > (item.overdueDays || 0)) item.overdueDays = overdueDays;
+            item.totalOverdueCharge = (item.totalOverdueCharge || 0) + penalty;
+          }
+          
+          item.returnStatus = 'Returned W/O Pay';
+
+          // Restore stock
+          if (isValidObjectId(item.tool)) {
+            const updatedTool = await Tool.findByIdAndUpdate(item.tool, { $inc: { stock: qty } }, { new: true });
+            if (updatedTool && updatedTool.stock > 0 && updatedTool.status === 'Booked') {
+              await Tool.findByIdAndUpdate(item.tool, { status: 'Available' });
+            }
+          }
+        }
+        
+        // Paid Not Returned
+        if (pnrData && pnrData.quantity > 0) {
+          const qty = Number(pnrData.quantity);
+          const itemDate = pnrData.date ? new Date(pnrData.date) : returnDateObj;
+          item.returnDates = item.returnDates || [];
+          item.returnDates.push({ quantity: qty, date: itemDate });
+          item.returnedQuantity = (item.returnedQuantity || 0) + qty;
+          item.returnStatus = 'Paid Not Returned';
+          // DO NOT restore tool stock
+        }
+
         if ((item.returnedQuantity || 0) < (item.quantity || 1)) {
           allFullyReturned = false;
         }
@@ -921,6 +977,18 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
     if (booking.accessories && booking.accessories.length > 0) {
       for (const acc of booking.accessories) {
         const returnedData = (returnedAccessories || []).find(r => String(r.id) === String(acc._id));
+        const rwopAccData = (returnedWithoutPayAccessories || []).find(r => String(r.id) === String(acc._id));
+        const pnrAccData = (paidNotReturnedAccessories || []).find(r => String(r.id) === String(acc._id));
+        
+        const combinedData = pnrAccData || returnedData || rwopAccData;
+        if (combinedData && combinedData.amountPaid !== undefined) {
+           acc.amountPaid = Number(combinedData.amountPaid) || 0;
+           const accRate = Number(acc.price) || 0;
+           const qty = Number(acc.quantity) || 1;
+           const days = Number(acc.rentalDays) || Number(booking.totalDays) || 1;
+           acc.amountDue = Math.max(0, (accRate * qty * days) - acc.amountPaid);
+        }
+
         if (returnedData && returnedData.quantity > 0) {
           const qty = Number(returnedData.quantity);
           const accDate = returnedData.date ? new Date(returnedData.date) : returnDateObj;
@@ -957,6 +1025,51 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
             }
           }
         }
+
+        // Returned W/O Pay Accessories
+        if (rwopAccData && rwopAccData.quantity > 0) {
+          const qty = Number(rwopAccData.quantity);
+          const accDate = rwopAccData.date ? new Date(rwopAccData.date) : returnDateObj;
+          acc.returnDates = acc.returnDates || [];
+          acc.returnDates.push({ quantity: qty, date: accDate });
+          acc.returnedQuantity = (acc.returnedQuantity || 0) + qty;
+          
+          const expectedRet = acc.expectedReturnDate ? new Date(acc.expectedReturnDate) : new Date(booking.returnDate);
+          expectedRet.setHours(0, 0, 0, 0);
+          const actRet = new Date(accDate);
+          actRet.setHours(0, 0, 0, 0);
+          if (actRet > expectedRet) {
+            const overdueDays = Math.ceil((actRet - expectedRet) / (1000 * 60 * 60 * 24));
+            const penaltyRate = Number(acc.price) || Number(acc.overdueChargePerDay) || 500;
+            const penalty = overdueDays * penaltyRate * qty;
+            if (overdueDays > (acc.overdueDays || 0)) acc.overdueDays = overdueDays;
+            acc.totalOverdueCharge = (acc.totalOverdueCharge || 0) + penalty;
+          }
+
+          acc.returnStatus = 'Returned W/O Pay';
+
+          if (isValidObjectId(acc.accessory)) {
+            const updatedAcc = await Accessory.findByIdAndUpdate(acc.accessory, { $inc: { stock: qty } }, { new: true });
+            if (updatedAcc) {
+              let status = 'In Stock';
+              if (updatedAcc.stock <= 0) status = 'Out of Stock';
+              else if (updatedAcc.stock < 5) status = 'Low Stock';
+              await Accessory.findByIdAndUpdate(acc.accessory, { status });
+            }
+          }
+        }
+
+        // Paid Not Returned
+        if (pnrAccData && pnrAccData.quantity > 0) {
+          const qty = Number(pnrAccData.quantity);
+          const accDate = pnrAccData.date ? new Date(pnrAccData.date) : returnDateObj;
+          acc.returnDates = acc.returnDates || [];
+          acc.returnDates.push({ quantity: qty, date: accDate });
+          acc.returnedQuantity = (acc.returnedQuantity || 0) + qty;
+          acc.returnStatus = 'Paid Not Returned';
+          // DO NOT restore accessory stock
+        }
+
         if ((acc.returnedQuantity || 0) < (acc.quantity || 1)) {
           allFullyReturned = false;
         }

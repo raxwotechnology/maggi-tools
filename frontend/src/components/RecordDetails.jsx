@@ -684,8 +684,13 @@ const RecordDetails = ({ data, type }) => {
           const diff = Math.ceil((expRet - today) / (1000 * 60 * 60 * 24));
           
           let statusBadge;
-          if ((it.returnedQuantity || 0) >= (it.quantity || 1)) {
-            if (data.balanceAmount > 0) {
+          if (it.returnStatus === 'Paid Not Returned') {
+            statusBadge = <span style={{ background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>✓ PAID (NOT RETURNED)</span>;
+          } else if (it.returnStatus === 'Returned W/O Pay') {
+            statusBadge = <span style={{ background: 'var(--danger-soft)', color: 'var(--danger)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>✓ RETURNED W/O PAY</span>;
+          } else if ((it.returnedQuantity || 0) >= (it.quantity || 1)) {
+            const itemDue = it.amountDue !== undefined ? it.amountDue : data.balanceAmount;
+            if (itemDue > 0) {
               statusBadge = <span style={{ background: 'var(--danger-soft)', color: 'var(--danger)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>✓ RETURNED (UNPAID)</span>;
             } else {
               statusBadge = <span style={{ background: 'var(--success-soft)', color: 'var(--success)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>✓ RETURNED</span>;
@@ -702,20 +707,49 @@ const RecordDetails = ({ data, type }) => {
             label: `Tool ${idx + 1}`,
             fullWidth: true,
             value: (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--bg-side)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.95rem' }}>{it.toolNumber} - {it.model}</div>
-                  {statusBadge}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: 'var(--bg-main)', padding: '18px', borderRadius: '14px', border: '1px solid var(--border)', boxShadow: '0 6px 16px rgba(0,0,0,0.03)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px dashed var(--border)', paddingBottom: '14px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ fontWeight: 900, color: 'var(--accent)', fontSize: '1.1rem', letterSpacing: '-0.02em' }}>{it.toolNumber}</div>
+                    <div style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.85rem' }}>{it.model}</div>
+                  </div>
+                  <div>{statusBadge}</div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '10px', fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '4px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}><span style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)' }}>Rate / Day</span><span style={{ fontWeight: 600, color: 'var(--text-main)' }}>LKR {Number(it.dailyRate).toLocaleString()}</span></div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}><span style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)' }}>Duration</span><span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{it.rentalDays || data.totalDays} Days</span></div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}><span style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)' }}>Total Qty</span><span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{it.quantity || 1}</span></div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}><span style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)' }}>Returned Qty</span><span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{it.returnedQuantity || 0}</span></div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--bg-card)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-soft)' }}>
+                    <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-dim)' }}>Rate/Day</span>
+                    <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.95rem' }}>LKR {Number(it.dailyRate).toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--bg-card)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-soft)' }}>
+                    <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-dim)' }}>Duration</span>
+                    <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.95rem' }}>{it.rentalDays || data.totalDays} Days</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--bg-card)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-soft)' }}>
+                    <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-dim)' }}>Status Qty</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.95rem' }}>{it.quantity || 1} <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600 }}>Total</span></span>
+                      <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--border)' }} />
+                      <span style={{ fontWeight: 800, color: 'var(--success)', fontSize: '0.95rem' }}>{it.returnedQuantity || 0} <span style={{ color: 'var(--success)', opacity: 0.7, fontSize: '0.75rem', fontWeight: 600 }}>Ret</span></span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--success-soft, #f0fdf4)', padding: '12px', borderRadius: '10px', border: '1px solid var(--success)' }}>
+                    <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--success)' }}>Paid</span>
+                    <span style={{ fontWeight: 900, color: 'var(--success)', fontSize: '0.95rem' }}>LKR {(it.amountPaid || 0).toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: (it.amountDue || 0) > 0 ? 'var(--danger-soft)' : 'var(--bg-card)', padding: '12px', borderRadius: '10px', border: `1px solid ${(it.amountDue || 0) > 0 ? 'var(--danger)' : 'var(--border-soft)'}` }}>
+                    <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, color: (it.amountDue || 0) > 0 ? 'var(--danger)' : 'var(--text-dim)' }}>Due</span>
+                    <span style={{ fontWeight: 900, color: (it.amountDue || 0) > 0 ? 'var(--danger)' : 'var(--text-main)', fontSize: '0.95rem' }}>LKR {(it.amountDue || 0).toLocaleString()}</span>
+                  </div>
                 </div>
-                <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: '10px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                  <div><strong style={{ color: 'var(--text-muted)' }}>Expected Return:</strong> <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{expRet.toLocaleDateString()}</span></div>
-                  {it.overdueDays > 0 && <div style={{ color: 'var(--danger)', fontWeight: 700 }}>+ LKR {(it.totalOverdueCharge || 0).toLocaleString()} Late Fee</div>}
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-side)', padding: '12px 16px', borderRadius: '10px', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)' }}></span>
+                    <strong style={{ color: 'var(--text-muted)' }}>Expected Return:</strong> 
+                    <span style={{ fontWeight: 800, color: 'var(--text-main)' }}>{expRet.toLocaleDateString()}</span>
+                  </div>
+                  {it.overdueDays > 0 && <div style={{ color: 'var(--danger)', fontWeight: 800, background: '#fee2e2', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem' }}>+ LKR {(it.totalOverdueCharge || 0).toLocaleString()} Late Fee</div>}
                 </div>
               </div>
             )
@@ -735,8 +769,13 @@ const RecordDetails = ({ data, type }) => {
         const diff = Math.ceil((expRet - today) / (1000 * 60 * 60 * 24));
         
         let statusBadge;
-        if ((a.returnedQuantity || 0) >= (a.quantity || 1)) {
-          if (data.balanceAmount > 0) {
+        if (a.returnStatus === 'Paid Not Returned') {
+          statusBadge = <span style={{ background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>✓ PAID (NOT RETURNED)</span>;
+        } else if (a.returnStatus === 'Returned W/O Pay') {
+          statusBadge = <span style={{ background: 'var(--danger-soft)', color: 'var(--danger)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>✓ RETURNED W/O PAY</span>;
+        } else if ((a.returnedQuantity || 0) >= (a.quantity || 1)) {
+          const itemDue = a.amountDue !== undefined ? a.amountDue : data.balanceAmount;
+          if (itemDue > 0) {
             statusBadge = <span style={{ background: 'var(--danger-soft)', color: 'var(--danger)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>✓ RETURNED (UNPAID)</span>;
           } else {
             statusBadge = <span style={{ background: 'var(--success-soft)', color: 'var(--success)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>✓ RETURNED</span>;
@@ -753,20 +792,48 @@ const RecordDetails = ({ data, type }) => {
           label: `Acc ${i + 1}`,
           fullWidth: true,
           value: (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--bg-side)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.95rem' }}>{a.number ? `[${a.number}] ` : ''}{a.name}</div>
-                {statusBadge}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: 'var(--bg-main)', padding: '18px', borderRadius: '14px', border: '1px solid var(--border)', boxShadow: '0 6px 16px rgba(0,0,0,0.03)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px dashed var(--border)', paddingBottom: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ fontWeight: 900, color: 'var(--accent)', fontSize: '1.1rem', letterSpacing: '-0.02em' }}>{a.number ? `[${a.number}] ` : ''}{a.name}</div>
+                </div>
+                <div>{statusBadge}</div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '10px', fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '4px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}><span style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)' }}>Rate / Day</span><span style={{ fontWeight: 600, color: 'var(--text-main)' }}>LKR {Number(a.price).toLocaleString()}</span></div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}><span style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)' }}>Duration</span><span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{a.rentalDays || data.totalDays} Days</span></div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}><span style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)' }}>Total Qty</span><span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{a.quantity || 1}</span></div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}><span style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)' }}>Returned Qty</span><span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{a.returnedQuantity || 0}</span></div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--bg-card)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-soft)' }}>
+                  <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-dim)' }}>Rate/Day</span>
+                  <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.95rem' }}>LKR {Number(a.price).toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--bg-card)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-soft)' }}>
+                  <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-dim)' }}>Duration</span>
+                  <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.95rem' }}>{a.rentalDays || data.totalDays} Days</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--bg-card)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-soft)' }}>
+                  <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-dim)' }}>Status Qty</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.95rem' }}>{a.quantity || 1} <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600 }}>Total</span></span>
+                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--border)' }} />
+                    <span style={{ fontWeight: 800, color: 'var(--success)', fontSize: '0.95rem' }}>{a.returnedQuantity || 0} <span style={{ color: 'var(--success)', opacity: 0.7, fontSize: '0.75rem', fontWeight: 600 }}>Ret</span></span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--success-soft, #f0fdf4)', padding: '12px', borderRadius: '10px', border: '1px solid var(--success)' }}>
+                  <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--success)' }}>Paid</span>
+                  <span style={{ fontWeight: 900, color: 'var(--success)', fontSize: '0.95rem' }}>LKR {(a.amountPaid || 0).toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: (a.amountDue || 0) > 0 ? 'var(--danger-soft)' : 'var(--bg-card)', padding: '12px', borderRadius: '10px', border: `1px solid ${(a.amountDue || 0) > 0 ? 'var(--danger)' : 'var(--border-soft)'}` }}>
+                  <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, color: (a.amountDue || 0) > 0 ? 'var(--danger)' : 'var(--text-dim)' }}>Due</span>
+                  <span style={{ fontWeight: 900, color: (a.amountDue || 0) > 0 ? 'var(--danger)' : 'var(--text-main)', fontSize: '0.95rem' }}>LKR {(a.amountDue || 0).toLocaleString()}</span>
+                </div>
               </div>
-              <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: '10px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                <div><strong style={{ color: 'var(--text-muted)' }}>Expected Return:</strong> <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{expRet.toLocaleDateString()}</span></div>
-                {a.overdueDays > 0 && <div style={{ color: 'var(--danger)', fontWeight: 700 }}>+ LKR {(a.totalOverdueCharge || 0).toLocaleString()} Late Fee</div>}
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-side)', padding: '12px 16px', borderRadius: '10px', fontSize: '0.85rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)' }}></span>
+                  <strong style={{ color: 'var(--text-muted)' }}>Expected Return:</strong> 
+                  <span style={{ fontWeight: 800, color: 'var(--text-main)' }}>{expRet.toLocaleDateString()}</span>
+                </div>
+                {a.overdueDays > 0 && <div style={{ color: 'var(--danger)', fontWeight: 800, background: '#fee2e2', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem' }}>+ LKR {(a.totalOverdueCharge || 0).toLocaleString()} Late Fee</div>}
               </div>
             </div>
           )
@@ -788,7 +855,7 @@ const RecordDetails = ({ data, type }) => {
         { label: 'Total Overdue Days', key: 'totalOverdueDays' },
         { label: 'Total Overdue Charges', key: 'totalOverdueCharges' },
         { label: 'Total Amount', key: 'totalAmount' },
-        { label: 'Advance Payment', key: 'advancePayment' },
+        { label: 'Amount Paid', key: 'advancePayment' },
         { label: 'Balance Due', key: 'balanceAmount' }
       ]
     },

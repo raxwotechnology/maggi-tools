@@ -309,7 +309,7 @@ const InvoiceForm = ({ onSubmit, onCancel, initialData }) => {
           </div>
           <div className="form-grid">
             <div className="form-group">
-              <label>Advance Payment</label>
+              <label>Amount Paid (LKR)</label>
               <input type="number" name="advancePayment" value={formData.advancePayment} onChange={handleChange} />
             </div>
             <div className="form-group">
@@ -347,9 +347,17 @@ const InvoiceForm = ({ onSubmit, onCancel, initialData }) => {
       </div>
 
       <div className="hire-form-footer">
-        <div className="total-display">
-          <span style={{ fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Grand Total</span>
-          <strong style={{ fontSize: '22px', color: 'var(--accent)' }}>LKR {grandTotal.toLocaleString()}</strong>
+        <div className="total-display" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+          <div>
+            <span style={{ fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Grand Total</span>
+            <strong style={{ fontSize: '16px', color: 'var(--text-main)', display: 'block' }}>LKR {grandTotal.toLocaleString()}</strong>
+          </div>
+          <div>
+            <span style={{ fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Balance Due</span>
+            <strong style={{ fontSize: '22px', color: 'var(--accent)', display: 'block' }}>
+              LKR {Math.max(0, grandTotal - Number(formData.advancePayment || 0)).toLocaleString()}
+            </strong>
+          </div>
         </div>
         <div className="modal-actions">
           <button type="button" className="cancel-btn" onClick={onCancel}>Cancel</button>

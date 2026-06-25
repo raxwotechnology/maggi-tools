@@ -157,9 +157,9 @@ button:active { transform: scale(0.96) !important; }
 /* Booking records — desktop: inline; mobile: stacked (see books.css + below) */
 .booking-record-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 6px;
+  gap: 12px;
   max-width: 100%;
 }
 
@@ -168,10 +168,11 @@ button:active { transform: scale(0.96) !important; }
 }
 
 .booking-btn-icon-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(4, 34px);
   gap: 6px;
+  justify-content: start;
+  align-items: center;
 }
 
 /* Desktop: show View as icon in the row */

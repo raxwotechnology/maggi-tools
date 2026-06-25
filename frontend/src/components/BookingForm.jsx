@@ -444,6 +444,8 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
             name: a.name,
             quantity: Number(a.quantity) || 1,
             price: Number(a.price) || 0,
+            amountPaid: Number(a.amountPaid) || 0,
+            amountDue: Math.max(0, ((Number(a.price) || 0) * (Number(a.quantity) || 1) * rDays) - (Number(a.amountPaid) || 0)),
             rentalDays: rDays,
             rentalDate: formData.pickupDate,
             expectedReturnDate: expRet.toISOString()
@@ -460,6 +462,8 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
             category: it.category,
             dailyRate: Number(it.dailyRate) || 0,
             quantity: Number(it.quantity) || 1,
+            amountPaid: Number(it.amountPaid) || 0,
+            amountDue: Math.max(0, ((Number(it.dailyRate) || 0) * (Number(it.quantity) || 1) * rDays) - (Number(it.amountPaid) || 0)),
             rentalDays: rDays,
             rentalDate: formData.pickupDate,
             expectedReturnDate: expRet.toISOString()
@@ -769,6 +773,29 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
                   />
                 </div>
 
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Paid</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="LKR"
+                    value={item.amountPaid === 0 ? '' : item.amountPaid}
+                    onChange={(e) =>
+                      handleItemChange(index, "amountPaid", e.target.value === '' ? '' : Number(e.target.value))
+                    }
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Due</label>
+                  <input
+                    type="text"
+                    value={`LKR ${Math.max(0, ((Number(item.dailyRate) || 0) * (item.quantity || 1) * (item.rentalDays || totalDays)) - (Number(item.amountPaid) || 0)).toLocaleString()}`}
+                    readOnly
+                    style={{ color: (((Number(item.dailyRate) || 0) * (item.quantity || 1) * (item.rentalDays || totalDays)) - (Number(item.amountPaid) || 0)) > 0 ? 'var(--danger)' : 'var(--success)', fontWeight: 700 }}
+                  />
+                </div>
+
                 <div
                   style={{
                     display: "flex",
@@ -1004,6 +1031,29 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
                         </strong>
                       </div>
 
+                      <div className="acc-rental-field">
+                        <span className="acc-rental-label">Paid (LKR)</span>
+                        <input
+                          className="acc-rental-input"
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          value={acc.amountPaid === 0 ? '' : acc.amountPaid}
+                          onChange={e => {
+                            const newAcc = [...formData.bookingAccessories];
+                            newAcc[index].amountPaid = e.target.value === '' ? '' : Number(e.target.value);
+                            setFormData({ ...formData, bookingAccessories: newAcc });
+                          }}
+                        />
+                      </div>
+
+                      <div className="acc-rental-subtotal">
+                        <span className="acc-rental-label">Due</span>
+                        <strong style={{ color: (((Number(acc.price) || 0) * acc.quantity * (acc.rentalDays || totalDays)) - (Number(acc.amountPaid) || 0)) > 0 ? 'var(--danger)' : 'var(--success)' }}>
+                          LKR {Math.max(0, ((Number(acc.price) || 0) * acc.quantity * (acc.rentalDays || totalDays)) - (Number(acc.amountPaid) || 0)).toLocaleString()}
+                        </strong>
+                      </div>
+
                     </div>
 
                     {/* ── Remove ── */}
@@ -1125,7 +1175,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
 
             <div className="form-grid-2">
               <div className="form-group">
-                <label>Advance Payment (LKR)</label>
+                <label>Amount Paid (LKR)</label>
                 <input
                   type="number"
                   min="0"

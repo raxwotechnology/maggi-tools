@@ -20,13 +20,15 @@ const bookingSchema = new mongoose.Schema({
     dailyRate: Number,
     quantity: { type: Number, default: 1 },
     returnedQuantity: { type: Number, default: 0 },
+    amountPaid: { type: Number, default: 0 },
+    amountDue: { type: Number, default: 0 },
     returnDates: [{ quantity: Number, date: Date }],
     // Per-item rental schedule
     rentalDate: { type: Date },
     expectedReturnDate: { type: Date },
     actualReturnDate: { type: Date },
     rentalDays: { type: Number, default: 1 },
-    returnStatus: { type: String, enum: ['Pending', 'Returned', 'Overdue'], default: 'Pending' },
+    returnStatus: { type: String, enum: ['Pending', 'Returned', 'Overdue', 'Paid Not Returned', 'Returned W/O Pay'], default: 'Pending' },
     // Overdue tracking per item
     overdueDays: { type: Number, default: 0 },
     overdueChargePerDay: { type: Number, default: 500 },
@@ -74,13 +76,15 @@ const bookingSchema = new mongoose.Schema({
     quantity: { type: Number, default: 1 },
     price: { type: Number, default: 0 },
     returnedQuantity: { type: Number, default: 0 },
+    amountPaid: { type: Number, default: 0 },
+    amountDue: { type: Number, default: 0 },
     returnDates: [{ quantity: Number, date: Date }],
     // Per-accessory rental schedule
     rentalDate: { type: Date },
     expectedReturnDate: { type: Date },
     actualReturnDate: { type: Date },
     rentalDays: { type: Number, default: 1 },
-    returnStatus: { type: String, enum: ['Pending', 'Returned', 'Overdue'], default: 'Pending' },
+    returnStatus: { type: String, enum: ['Pending', 'Returned', 'Overdue', 'Paid Not Returned', 'Returned W/O Pay'], default: 'Pending' },
     // Overdue tracking per accessory
     overdueDays: { type: Number, default: 0 },
     overdueChargePerDay: { type: Number, default: 500 },

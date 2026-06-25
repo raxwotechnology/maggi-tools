@@ -79,7 +79,7 @@ const BookingBook = ({ setActiveTab }) => {
     setViewModalOpen(true);
   };
 
-  const tableColumns = ['INV#', 'CUSTOMER', 'TOOL', 'PICKUP', 'RETURN', 'DAYS', 'TOTAL', 'BALANCE', 'STATUS', 'ACTION'];
+  const tableColumns = ['INV#', 'CUSTOMER', 'TOOL', 'PICKUP', 'RETURN', 'DAYS', 'TOTAL', 'PAID', 'BALANCE', 'STATUS', 'ACTION'];
 
   useEffect(() => { 
     fetchBookings(); 
@@ -610,8 +610,9 @@ const BookingBook = ({ setActiveTab }) => {
             PICKUP: r.displayPickup,
             RETURN: r.displayReturn,
             DAYS: <span className="status-badge status-confirmed" style={{ background: 'var(--bg-side)', color: 'var(--text-main)' }}>{r.totalDays || 1} Days</span>,
-            TOTAL: <strong style={{ color: 'var(--accent)' }}>LKR {r.displayTotal}</strong>,
-            BALANCE: <strong style={{ color: (r.balanceAmount || 0) > 0 ? 'var(--danger)' : 'var(--success)' }}>LKR {Math.max(0, r.balanceAmount || 0).toLocaleString()}</strong>,
+            TOTAL: <strong style={{ color: 'var(--text-main)', whiteSpace: 'nowrap' }}>LKR {r.displayTotal}</strong>,
+            PAID: <strong style={{ color: 'var(--success)', whiteSpace: 'nowrap' }}>LKR {(r.advancePayment || 0).toLocaleString()}</strong>,
+            BALANCE: <strong style={{ color: (r.balanceAmount || 0) > 0 ? 'var(--danger)' : 'var(--accent)', whiteSpace: 'nowrap' }}>LKR {Math.max(0, r.balanceAmount || 0).toLocaleString()}</strong>,
             STATUS: (
               Number(r.balanceAmount || 0) <= 0 ? (
                 <span
