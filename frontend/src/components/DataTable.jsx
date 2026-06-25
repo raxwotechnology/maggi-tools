@@ -4,12 +4,13 @@ import './DataTable.css';
 const DataTable = ({ columns, data, emptyMessage, loading, onRowClick }) => {
   const scrollRef = useRef(null);
   const isDown = useRef(false);
+  const isDragging = useRef(false);
   const startX = useRef(0);
   const scrollLeft = useRef(0);
 
   const handleMouseDown = (e) => {
     isDown.current = true;
-    scrollRef.current.classList.add('is-dragging');
+    isDragging.current = false;
     startX.current = e.pageX - scrollRef.current.offsetLeft;
     scrollLeft.current = scrollRef.current.scrollLeft;
   };
@@ -29,7 +30,20 @@ const DataTable = ({ columns, data, emptyMessage, loading, onRowClick }) => {
     e.preventDefault();
     const x = e.pageX - scrollRef.current.offsetLeft;
     const walk = (x - startX.current) * 1.5; // Scroll speed
+    
+    if (Math.abs(walk) > 5) {
+      isDragging.current = true;
+      scrollRef.current.classList.add('is-dragging');
+    }
+    
     scrollRef.current.scrollLeft = scrollLeft.current - walk;
+  };
+
+  const handleClickCapture = (e) => {
+    if (isDragging.current) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
   };
 
   return (
@@ -41,6 +55,7 @@ const DataTable = ({ columns, data, emptyMessage, loading, onRowClick }) => {
         onMouseLeave={handleMouseLeave}
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
+        onClickCapture={handleClickCapture}
       >
         <table className="data-table">
           <thead>

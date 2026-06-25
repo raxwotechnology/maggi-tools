@@ -20,10 +20,6 @@
   cursor: grabbing !important;
 }
 
-.data-table-root.is-dragging .data-table {
-  pointer-events: none;
-}
-
 /* ── Table ── */
 .data-table {
   width: 100%;
