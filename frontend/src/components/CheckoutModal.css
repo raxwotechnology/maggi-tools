@@ -1,0 +1,557 @@
+/* ═══════════════════════════════════════════════════════════
+   RETURN & PAY MODAL — Premium Mobile-First UI
+   All classes prefixed with rp- to avoid collisions
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Scrollable body ── */
+.rp-modal-body {
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: 82vh;
+  gap: 0;
+}
+
+/* ── Booking date strip ── */
+.rp-date-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-md);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+  margin-top: 14px;
+}
+.rp-date-strip strong { color: var(--text-main); }
+.rp-date-sep { color: var(--accent); font-weight: 700; margin: 0 4px; }
+
+/* ── Section heading ── */
+.rp-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.rp-section-label {
+  font-size: 0.65rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.rp-section-head::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent-soft) 0%, transparent 100%);
+}
+
+/* ── Empty state ── */
+.rp-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+.rp-empty-state span { font-size: 2rem; }
+
+/* ═══════════════════════════════════════
+   ITEM CARD
+   ═══════════════════════════════════════ */
+.rp-item-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  animation: rpCardIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes rpCardIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.rp-item-card:hover {
+  border-color: var(--accent-border);
+  box-shadow: var(--shadow-md);
+}
+
+.rp-item-card--overdue {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(239,68,68,0.03) 100%);
+}
+
+.rp-item-card--done {
+  opacity: 0.75;
+  background: var(--bg-side);
+}
+
+/* ── Card Header (name + cost badge) ── */
+.rp-item-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.rp-item-meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.rp-item-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.rp-item-name {
+  font-size: 0.925rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.rp-item-rate {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+/* Cost badge (top right) */
+.rp-item-cost-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-md);
+  padding: 6px 10px;
+}
+
+.rp-item-cost-label {
+  font-size: 0.55rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.rp-item-cost-value {
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* ── Date pills row ── */
+.rp-item-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.rp-date-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.rp-overdue-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  background: var(--danger-soft);
+  border: 1px solid rgba(239,68,68,0.25);
+  border-radius: 99px;
+  font-size: 0.73rem;
+  font-weight: 800;
+  color: var(--danger);
+  animation: rp-pulse 2s ease-in-out infinite;
+}
+
+@keyframes rp-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.65; }
+}
+
+/* ── Controls Grid (4 inputs: date, qty, paid, due) ── */
+.rp-controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.rp-control-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rp-control-label {
+  font-size: 0.6rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rp-control-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+  background: var(--bg-main);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.rp-control-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: var(--bg-card);
+}
+
+.rp-control-input--paid {
+  color: var(--success);
+  border-color: rgba(16,185,129,0.3);
+  background: var(--success-soft);
+}
+.rp-control-input--paid:focus {
+  border-color: var(--success);
+  box-shadow: 0 0 0 3px var(--success-soft);
+}
+
+/* Due display (read-only) */
+.rp-due-display {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  font-size: 0.875rem;
+  font-weight: 800;
+  border: 1.5px solid transparent;
+}
+
+.rp-due-display--unpaid {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: rgba(239,68,68,0.2);
+}
+
+.rp-due-display--clear {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: rgba(16,185,129,0.2);
+}
+
+/* ── Status chip (for completed items) ── */
+.rp-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.rp-status-chip--accent  { background: var(--accent-soft);  color: var(--accent);  border-color: var(--accent-border); }
+.rp-status-chip--danger  { background: var(--danger-soft);  color: var(--danger);  border-color: rgba(239,68,68,0.2); }
+.rp-status-chip--success { background: var(--success-soft); color: var(--success); border-color: rgba(16,185,129,0.2); }
+
+/* ── Action pill buttons ── */
+.rp-action-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 99px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.rp-pill:disabled { opacity: 0.5; cursor: not-allowed; }
+.rp-pill:not(:disabled):hover { transform: translateY(-1px); }
+.rp-pill:not(:disabled):active { transform: scale(0.97); }
+
+.rp-pill--danger {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.rp-pill--danger.rp-pill--active {
+  background: var(--danger-soft);
+  box-shadow: 0 3px 10px rgba(239,68,68,0.25);
+}
+
+.rp-pill--accent {
+  background: transparent;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.rp-pill--accent.rp-pill--active {
+  background: var(--accent-soft);
+  box-shadow: 0 3px 10px var(--accent-glow);
+}
+
+.rp-pill--success {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+.rp-pill--success.rp-pill--active {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: rgba(16,185,129,0.4);
+  box-shadow: 0 3px 10px rgba(16,185,129,0.2);
+}
+
+/* ═══════════════════════════════════════
+   BILL SUMMARY CARD
+   ═══════════════════════════════════════ */
+.rp-summary-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.rp-summary-title {
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+.rp-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  padding: 5px 0;
+  color: var(--text-main);
+}
+
+.rp-summary-row + .rp-summary-row {
+  border-top: 1px solid var(--border-soft);
+}
+
+.rp-summary-row--total {
+  font-weight: 800;
+  font-size: 1rem;
+  padding: 8px 0;
+  border-top: 1.5px solid var(--border) !important;
+  margin-top: 4px;
+}
+
+.rp-summary-row--balance {
+  font-weight: 800;
+  font-size: 1rem;
+  padding: 8px 0 0;
+  border-top: 1.5px solid var(--border) !important;
+  margin-top: 4px;
+}
+
+/* ═══════════════════════════════════════
+   COLLECT PAYMENT CARD
+   ═══════════════════════════════════════ */
+.rp-payment-card {
+  background: var(--success-soft);
+  border: 1px solid rgba(16,185,129,0.25);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.rp-payment-title {
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: var(--success);
+  margin-bottom: 12px;
+}
+
+.rp-payment-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.rp-after-payment {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.06);
+  border-radius: var(--r-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+/* ═══════════════════════════════════════
+   FOOTER ACTION BUTTONS
+   ═══════════════════════════════════════ */
+.rp-footer {
+  display: flex;
+  gap: 10px;
+  padding: 14px 0 2px;
+  border-top: 1px solid var(--border-soft);
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.rp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: var(--r-md);
+  font-size: 0.875rem;
+  font-weight: 800;
+  cursor: pointer;
+  border: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+.rp-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.rp-btn:not(:disabled):hover { transform: translateY(-2px); }
+.rp-btn:not(:disabled):active { transform: scale(0.97); }
+
+.rp-btn--ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1.5px solid var(--border);
+}
+.rp-btn--ghost:hover { background: var(--bg-main); color: var(--text-main); }
+
+.rp-btn--save {
+  background: var(--bg-main);
+  color: var(--success);
+  border: 1.5px solid var(--success);
+}
+.rp-btn--save:not(:disabled):hover {
+  background: var(--success-soft);
+  box-shadow: 0 4px 14px rgba(16,185,129,0.25);
+}
+
+.rp-btn--confirm {
+  flex: 1;
+  background: var(--accent-gradient);
+  color: #fff;
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+.rp-btn--confirm:not(:disabled):hover {
+  filter: brightness(1.08);
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+
+/* ═══════════════════════════════════════
+   RESPONSIVE BREAKPOINTS
+   ═══════════════════════════════════════ */
+
+/* Tablet: tighten controls */
+@media (max-width: 768px) {
+  .rp-modal-body { padding: 0 12px 12px; max-height: 88vh; }
+  .rp-controls-grid { gap: 8px; }
+  .rp-item-cost-value { font-size: 0.95rem; }
+  .rp-payment-grid { grid-template-columns: 1fr; gap: 10px; }
+}
+
+/* Mobile: stack controls into 2-col grid */
+@media (max-width: 580px) {
+  .rp-controls-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  /* date takes full width on mobile */
+  .rp-controls-grid .rp-control-field:first-child {
+    grid-column: 1 / -1;
+  }
+  .rp-action-pills { gap: 6px; }
+  .rp-pill { height: 34px; padding: 0 11px; font-size: 0.75rem; }
+  .rp-footer { gap: 8px; }
+  .rp-btn { height: 46px; font-size: 0.825rem; }
+  .rp-btn--ghost { flex: 1; }
+  .rp-btn--save  { flex: 1; }
+}
+
+/* Very small phones: full-width action pills */
+@media (max-width: 400px) {
+  .rp-action-pills { flex-direction: column; }
+  .rp-pill { width: 100%; justify-content: center; }
+  .rp-item-header { flex-direction: column; gap: 8px; }
+  .rp-item-cost-badge { flex-direction: row; align-items: center; gap: 8px; align-self: stretch; justify-content: space-between; }
+  .rp-footer { flex-direction: column; }
+  .rp-btn { width: 100%; }
+}
