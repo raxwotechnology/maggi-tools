@@ -22,7 +22,7 @@ export function calculateBookingCosts(formData, totalDays = 1) {
         pickupDateObj.setHours(0,0,0,0);
         
         let diffDays = Math.round((rdDate - pickupDateObj) / (1000 * 60 * 60 * 24));
-        if (diffDays <= 0) diffDays = 0;
+        if (diffDays <= 0) diffDays = 1;
         else diffDays += 1;
         cost += rate * qty * diffDays;
       });

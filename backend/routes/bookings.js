@@ -113,7 +113,7 @@ function calcBookingTotals(body) {
         pickupDateObj.setHours(0,0,0,0);
         
         let diffDays = Math.round((rdDate - pickupDateObj) / (1000 * 60 * 60 * 24));
-        if (diffDays <= 0) diffDays = 0; // Same day return = no charge
+        if (diffDays <= 0) diffDays = 1; // Same day return = 1 day minimum
         else diffDays += 1; // Align with totalDays calculation (inclusive of start day)
         cost += rate * qty * diffDays;
       });
@@ -905,7 +905,7 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
           
           if (actRet > expectedRet) {
             const overdueDays = Math.ceil((actRet - expectedRet) / (1000 * 60 * 60 * 24));
-            const penaltyRate = Number(item.dailyRate) || Number(item.overdueChargePerDay) || 500;
+            const penaltyRate = Number(item.overdueChargePerDay) || 500;
             const penalty = overdueDays * penaltyRate * qty;
             
             if (overdueDays > (item.overdueDays || 0)) {
@@ -939,7 +939,7 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
           actRet.setHours(0, 0, 0, 0);
           if (actRet > expectedRet) {
             const overdueDays = Math.ceil((actRet - expectedRet) / (1000 * 60 * 60 * 24));
-            const penaltyRate = Number(item.dailyRate) || Number(item.overdueChargePerDay) || 500;
+            const penaltyRate = Number(item.overdueChargePerDay) || 500;
             const penalty = overdueDays * penaltyRate * qty;
             if (overdueDays > (item.overdueDays || 0)) item.overdueDays = overdueDays;
             item.totalOverdueCharge = (item.totalOverdueCharge || 0) + penalty;
@@ -1004,7 +1004,7 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
           
           if (actRet > expectedRet) {
             const overdueDays = Math.ceil((actRet - expectedRet) / (1000 * 60 * 60 * 24));
-            const penaltyRate = Number(acc.price) || Number(acc.overdueChargePerDay) || 500;
+            const penaltyRate = Number(acc.overdueChargePerDay) || 500;
             const penalty = overdueDays * penaltyRate * qty;
             
             if (overdueDays > (acc.overdueDays || 0)) {
@@ -1040,7 +1040,7 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
           actRet.setHours(0, 0, 0, 0);
           if (actRet > expectedRet) {
             const overdueDays = Math.ceil((actRet - expectedRet) / (1000 * 60 * 60 * 24));
-            const penaltyRate = Number(acc.price) || Number(acc.overdueChargePerDay) || 500;
+            const penaltyRate = Number(acc.overdueChargePerDay) || 500;
             const penalty = overdueDays * penaltyRate * qty;
             if (overdueDays > (acc.overdueDays || 0)) acc.overdueDays = overdueDays;
             acc.totalOverdueCharge = (acc.totalOverdueCharge || 0) + penalty;

@@ -110,30 +110,9 @@ const App = () => {
     return () => window.removeEventListener('raxwo_force_logout', handleForceLogout);
   }, []);
 
-  // ── Session Timeout Logic (15 Minutes) ──
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    let timeout;
-    const TIMEOUT_MS = 15 * 60 * 1000;
-
-    const resetTimer = () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        handleLogout();
-        alert('Your session has expired due to inactivity. Please log in again.');
-      }, TIMEOUT_MS);
-    };
-
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    events.forEach(e => document.addEventListener(e, resetTimer));
-    resetTimer();
-
-    return () => {
-      clearTimeout(timeout);
-      events.forEach(e => document.removeEventListener(e, resetTimer));
-    };
-  }, [isAuthenticated]);
+  // ── Session Timeout Logic Removed ──
+  // User requested sessions to stay active until manual logout
+  // (Previously a 15-minute inactivity timer was here)
 
   const renderContent = () => {
     const restrictedTabs = ['employees', 'reports', 'salaries', 'clients', 'payments', 'invoices', 'quotations', 'extraIncome', 'expenses', 'attendance', 'hires', 'accounts', 'cheques'];
