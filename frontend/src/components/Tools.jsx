@@ -8,6 +8,7 @@ import '../styles/forms.css';
 import '../styles/books.css';
 import RecordDetails from './RecordDetails';
 import ToolForm from './ToolForm';
+import { confirmDialog, toast } from '../utils/feedback';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -97,19 +98,31 @@ const Tools = () => {
   useEffect(() => { fetchTools(); }, []);
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this tool? This will remove all its history.')) {
+    const ok = await confirmDialog({
+      title: 'Delete Tool',
+      message: 'Are you sure you want to delete this tool? This will permanently remove all its history.',
+      confirmText: 'Delete Tool',
+      type: 'danger',
+    });
+    if (ok) {
       try {
         await toolAPI.delete(id);
+        toast.success('Tool deleted successfully.');
         fetchTools();
-      } catch (err) { alert('Failed to delete tool.'); }
+      } catch (err) {
+        toast.error('Failed to delete tool.');
+      }
     }
   };
 
   const handleStatusChange = async (id, newStatus) => {
     try {
       await toolAPI.update(id, { status: newStatus });
+      toast.success(`Tool status updated to ${newStatus}`);
       fetchTools();
-    } catch (err) { alert('Failed to update tool status.'); }
+    } catch (err) {
+      toast.error('Failed to update tool status.');
+    }
   };
 
   const fetchTools = async () => {
@@ -171,7 +184,12 @@ const Tools = () => {
   };
 
   const filteredRecords = useMemo(() => {
-    return toolRecords.filter(r => !searchQuery || (r.rawData?.number || '').toLowerCase().includes(searchQuery.toLowerCase()) || (r.rawData?.model || '').toLowerCase().includes(searchQuery.toLowerCase()));
+    const q = searchQuery.toLowerCase();
+    return toolRecords.filter(r => !searchQuery || 
+      (r.rawData?.number || '').toLowerCase().includes(q) || 
+      (r.rawData?.model || '').toLowerCase().includes(q) ||
+      (r.rawData?.category || '').toLowerCase().includes(q)
+    );
   }, [toolRecords, searchQuery]);
 
   const handleExportPDF = () => {

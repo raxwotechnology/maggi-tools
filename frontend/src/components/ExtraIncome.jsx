@@ -7,6 +7,7 @@ import { generateGenericReportPDF } from '../utils/genericReportGenerator';
 import Autocomplete from './Autocomplete';
 import '../styles/forms.css';
 import '../styles/books.css';
+import { confirmDialog, toast } from '../utils/feedback';
 
 const ExtraIncomeForm = ({ onSubmit, onCancel, initialData, categories = [] }) => {
   const [formData, setFormData] = React.useState(initialData || { date: new Date().toISOString().split('T')[0], description: '', amount: '', category: '', note: '', paymentMethod: 'Cash', accountId: '' });
@@ -189,13 +190,23 @@ const ExtraIncome = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Delete this income record?')) {
+    const ok = await confirmDialog({
+      title: 'Delete Income Record',
+      message: 'Are you sure you want to delete this income record?',
+      confirmText: 'Delete',
+      type: 'danger',
+    });
+    if (ok) {
       try {
         await extraIncomeAPI.delete(id);
         setSuccessMsg('Record deleted');
+        toast.success('Income record deleted.');
         fetchRecords();
         setTimeout(() => setSuccessMsg(''), 3000);
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to delete income record.');
+      }
     }
   };
   

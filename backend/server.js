@@ -54,6 +54,7 @@ if (!dbUri) {
 // Routes
 app.use('/api/accessories', require('./routes/accessories'));
 app.use('/api/consumables', require('./routes/consumables'));
+app.use('/api/diesel', require('./routes/consumables'));
 app.use('/api/hires', require('./routes/hires'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/salaries', require('./routes/salaries'));

@@ -25,11 +25,13 @@ const QuotationDocumentView = ({ data }) => {
 
   if (!data) return null;
 
-  const activeLogo = logoUrl;
-  const companyName = settings?.name || 'MAGGI TOOLS';
+  const activeLogo = settings?.logo || logoUrl;
+  const companyName = settings?.companyName || settings?.name || 'MAGGI TOOLS';
   const companyAddress = settings?.address || 'No. 241, Rajamaha Vihara Rd, Mirihana, Kotte.';
-  const companyEmail = settings?.email || 'info@raxwo.com';
-  const companyPhones = settings?.phones || ['+94 775 085 815', '+94 723 627 888', '+94 766 779 603'];
+  const companyEmail = settings?.email || 'sampathperera253@gmail.com';
+  const companyPhones = Array.isArray(settings?.phones) && settings.phones.length > 0
+    ? settings.phones
+    : (settings?.phone ? [settings.phone] : ['+94 777 782 015', '+94 773 123 073']);
 
   const formattedDate = data.date ? new Date(data.date).toLocaleDateString(undefined, {
     year: 'numeric',
@@ -136,39 +138,62 @@ const QuotationDocumentView = ({ data }) => {
             <table className="doc-items-table">
               <thead>
                 <tr>
+                  <th style={{ width: '40px', textAlign: 'center' }}>#</th>
                   <th>Item / Tool Description</th>
+                  <th className="num-col">Rate / Day</th>
                   <th className="num-col">Qty</th>
-                  <th className="num-col">Duration</th>
-                  <th className="num-col">Daily Rate</th>
-                  <th className="num-col">Total</th>
+                  <th className="num-col">Days</th>
+                  <th className="num-col">Amount (LKR)</th>
                 </tr>
               </thead>
               <tbody>
                 {Array.isArray(data.items) && data.items.length > 0 ? (
                   data.items.map((it, idx) => (
                     <tr key={idx}>
+                      <td style={{ textAlign: 'center', color: 'var(--text-dim)' }}>{idx + 1}</td>
                       <td className="item-desc-cell">
                         <div className="main-item-name">{it.model || 'Rental Tool'}</div>
-                        {it.toolNumber && <span className="item-sub-id">Serial/ID: {it.toolNumber}</span>}
+                        {it.toolNumber && <span className="item-sub-id">Tool #{it.toolNumber}</span>}
                       </td>
-                      <td className="num-col bold-val">{it.quantity || 1}</td>
-                      <td className="num-col">{it.days || 1} day(s)</td>
                       <td className="num-col">LKR {(it.dailyRate || 0).toLocaleString()}</td>
-                      <td className="num-col bold-val">LKR {(it.lineTotal || 0).toLocaleString()}</td>
+                      <td className="num-col bold-val">{it.quantity || 1}</td>
+                      <td className="num-col">{it.days || 1}</td>
+                      <td className="num-col bold-val">
+                        LKR {(it.lineTotal != null && it.lineTotal > 0 ? it.lineTotal : (it.quantity || 1) * (it.days || 1) * (it.dailyRate || 0)).toLocaleString()}
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
+                    <td style={{ textAlign: 'center' }}>1</td>
                     <td className="item-desc-cell">
                       <div className="main-item-name">{data.toolCategory || 'Rental Services'}</div>
                       {data.toolNo && <span className="item-sub-id">Preferred Tool: {data.toolNo}</span>}
                     </td>
-                    <td className="num-col bold-val">1</td>
-                    <td className="num-col">1 day(s)</td>
                     <td className="num-col">As per category</td>
+                    <td className="num-col bold-val">1</td>
+                    <td className="num-col">1</td>
                     <td className="num-col bold-val">—</td>
                   </tr>
                 )}
+
+                {Array.isArray(data.accessories) && data.accessories.map((acc, idx) => (
+                  <tr key={`acc-${idx}`}>
+                    <td style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
+                      {(data.items?.length || 0) + idx + 1}
+                    </td>
+                    <td className="item-desc-cell">
+                      <div className="main-item-name">Accessory: {acc.name}</div>
+                      {acc.number && <span className="item-sub-id">Part #{acc.number}</span>}
+                    </td>
+                    <td className="num-col">LKR {Number(acc.price || 0).toLocaleString()}</td>
+                    <td className="num-col bold-val">{acc.quantity || 1}</td>
+                    <td className="num-col">{data.items?.[0]?.days || 1}</td>
+                    <td className="num-col bold-val">
+                      LKR {(Number(acc.price || 0) * Number(acc.quantity || 1) * (data.items?.[0]?.days || 1)).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -179,17 +204,19 @@ const QuotationDocumentView = ({ data }) => {
                 <div key={idx} className="mobile-item-card">
                   <div className="card-top-row">
                     <span className="item-card-title">{it.model || 'Rental Tool'}</span>
-                    <span className="item-card-total">LKR {(it.lineTotal || 0).toLocaleString()}</span>
+                    <span className="item-card-total">
+                      LKR {(it.lineTotal != null && it.lineTotal > 0 ? it.lineTotal : (it.quantity || 1) * (it.days || 1) * (it.dailyRate || 0)).toLocaleString()}
+                    </span>
                   </div>
-                  {it.toolNumber && <div className="item-card-sub">Serial/ID: {it.toolNumber}</div>}
+                  {it.toolNumber && <div className="item-card-sub">Tool #{it.toolNumber}</div>}
                   <div className="card-details-grid">
                     <div className="card-det-cell">
                       <label>Qty</label>
                       <span>{it.quantity || 1}</span>
                     </div>
                     <div className="card-det-cell">
-                      <label>Duration</label>
-                      <span>{it.days || 1} day(s)</span>
+                      <label>Days</label>
+                      <span>{it.days || 1}</span>
                     </div>
                     <div className="card-det-cell">
                       <label>Daily Rate</label>
@@ -198,60 +225,79 @@ const QuotationDocumentView = ({ data }) => {
                   </div>
                 </div>
               ))
-            ) : (
-              <div className="mobile-item-card">
-                <div className="card-top-row">
-                  <span className="item-card-title">{data.toolCategory || 'Rental Services'}</span>
-                  <span className="item-card-total">—</span>
-                </div>
-                {data.toolNo && <div className="item-card-sub">Preferred Tool: {data.toolNo}</div>}
-                <div className="card-details-grid">
-                  <div className="card-det-cell">
-                    <label>Qty</label>
-                    <span>1</span>
-                  </div>
-                  <div className="card-det-cell">
-                    <label>Duration</label>
-                    <span>1 day(s)</span>
-                  </div>
-                  <div className="card-det-cell">
-                    <label>Daily Rate</label>
-                    <span>As per category</span>
-                  </div>
-                </div>
-              </div>
-            )}
+            ) : null}
           </div>
         </div>
 
-        <div className="summary-section-block">
-          <div className="spacer-col" />
+        <div className="summary-section-block" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          {/* Left Service Details Box */}
+          <div
+            style={{
+              background: 'var(--bg-side, #f8fafc)',
+              border: '1px solid var(--border, #e2e8f0)',
+              borderRadius: '8px',
+              padding: '14px',
+              fontSize: '12px'
+            }}
+          >
+            <h4 style={{ margin: '0 0 10px 0', fontSize: '11px', textTransform: 'uppercase', color: 'var(--primary, #0f172a)' }}>
+              Rental &amp; Service Details
+            </h4>
+            {(data.fuelType || Number(data.fuelCharge) > 0) && (
+              <div style={{ marginBottom: '6px' }}>
+                <strong>Fuel / Oil: </strong>
+                <span>{data.fuelType || 'Engine Oil'} supplied with machine</span>
+              </div>
+            )}
+            {(data.operatorName || Number(data.labourCharge) > 0) && (
+              <div style={{ marginBottom: '6px' }}>
+                <strong>Labour: </strong>
+                <span>{data.operatorName?.startsWith('Assigned') ? data.operatorName : `Assigned: ${data.operatorName || 'Labour'}`}</span>
+              </div>
+            )}
+            {Number(data.refundableDeposit) > 0 && (
+              <div style={{ marginBottom: '6px' }}>
+                <strong>Deposit: </strong>
+                <span>Refundable upon item return inspection</span>
+              </div>
+            )}
+            <div style={{ marginTop: '12px', fontSize: '11px', color: '#64748b', fontStyle: 'italic' }}>
+              <div>• Please verify tool condition &amp; fuel before handover.</div>
+              <div>• Return on time to prevent additional daily rental charges.</div>
+            </div>
+          </div>
           
           <div className="pricing-breakdown-box">
             <table className="pricing-table">
               <tbody>
-                {Number(data.mandatoryCharge) > 0 && (
-                  <tr>
-                    <td>Base / Mandatory Charge:</td>
-                    <td>LKR {Number(data.mandatoryCharge).toLocaleString()}</td>
-                  </tr>
-                )}
                 {Number(data.transportCharge) > 0 && (
                   <tr>
-                    <td>Transport & Mobilization:</td>
+                    <td>Transport &amp; Mobilization:</td>
                     <td>LKR {Number(data.transportCharge).toLocaleString()}</td>
+                  </tr>
+                )}
+                {Number(data.fuelCharge) > 0 && (
+                  <tr>
+                    <td>Fuel / Oil ({data.fuelType || 'Engine Oil'}):</td>
+                    <td>LKR {Number(data.fuelCharge).toLocaleString()}</td>
+                  </tr>
+                )}
+                {Number(data.labourCharge) > 0 && (
+                  <tr>
+                    <td>Labour / Operator ({data.operatorName || 'Assigned'}):</td>
+                    <td>LKR {Number(data.labourCharge).toLocaleString()}</td>
+                  </tr>
+                )}
+                {(Number(data.otherCharges) > 0 || Number(data.mandatoryCharge) > 0) && (
+                  <tr>
+                    <td>Other / Mandatory Charge:</td>
+                    <td>LKR {Number(data.otherCharges || data.mandatoryCharge).toLocaleString()}</td>
                   </tr>
                 )}
                 {Number(data.refundableDeposit) > 0 && (
                   <tr>
                     <td>Refundable Security Deposit:</td>
                     <td>LKR {Number(data.refundableDeposit).toLocaleString()}</td>
-                  </tr>
-                )}
-                {Number(data.extraHourRate) > 0 && (
-                  <tr>
-                    <td>Extra Usage Rate (Hourly):</td>
-                    <td>LKR {Number(data.extraHourRate).toLocaleString()}</td>
                   </tr>
                 )}
                 {Number(data.discount) > 0 && (
@@ -303,17 +349,11 @@ const RecordDetails = ({ data, type }) => {
   const [history, setHistory] = React.useState([]);
   const [loadingHistory, setLoadingHistory] = React.useState(false);
 
-  React.useEffect(() => {
-    if (type === 'client' && data?.name) {
-      loadClientHistory();
-    }
-  }, [data, type]);
-
   const loadClientHistory = async () => {
     setLoadingHistory(true);
     try {
       const response = await bookingAPI.get();
-      const clientName = (data.name || '').toLowerCase();
+      const clientName = (data?.name || '').toLowerCase();
       const rentals = (response.data || []).filter(b => (b.clientName || '').toLowerCase() === clientName);
       setHistory(rentals);
     } catch (err) {
@@ -322,6 +362,12 @@ const RecordDetails = ({ data, type }) => {
       setLoadingHistory(false);
     }
   };
+
+  React.useEffect(() => {
+    if (type === 'client' && data?.name) {
+      loadClientHistory();
+    }
+  }, [data, type]);
 
   if (!data) return null;
 
@@ -481,6 +527,8 @@ const RecordDetails = ({ data, type }) => {
     {
       title: 'Pricing Breakdown', fields: [
         { label: 'Transport Charge', key: 'transportCharge' },
+        { label: 'Fuel / Petrol Charge', key: 'fuelCharge' },
+        { label: 'Labour Charge', key: 'labourCharge' },
         { label: 'Other Charges', key: 'otherCharges' },
         { label: 'Discount', key: 'discount' },
         { label: 'Grand Total', key: 'totalAmount' },
@@ -844,13 +892,17 @@ const RecordDetails = ({ data, type }) => {
       title: 'Schedule Information', fields: [
         { label: 'Pickup Date', key: 'pickupDate' },
         { label: 'Return Date', key: 'returnDate' },
-        { label: 'Total Days', key: 'totalDays' }
+        { label: 'Total Days', key: 'totalDays' },
+        { label: 'Assigned Worker / Operator', key: 'operatorName' }
       ]
     },
     {
       title: 'Financial Summary', fields: [
         { label: 'Base Amount', key: 'baseAmount' },
         { label: 'Discount', key: 'discount' },
+        { label: 'Transport Charge', key: 'transportCharge' },
+        { label: 'Fuel / Petrol Charge', key: 'fuelCharge' },
+        { label: 'Labour Charge', key: 'labourCharge' },
         { label: 'Extra Charges', key: 'extraCharges' },
         { label: 'Total Overdue Days', key: 'totalOverdueDays' },
         { label: 'Total Overdue Charges', key: 'totalOverdueCharges' },
@@ -891,12 +943,19 @@ const RecordDetails = ({ data, type }) => {
   return (
     <div className="details-overlay">
       {(type === 'invoice' || type === 'quotation') && (
-        <div className="detail-actions-header">
+        <div className="detail-actions-header" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button
             className="download-pdf-btn"
             onClick={() => type === 'invoice' ? generateInvoicePDF(data) : generateQuotationPDF(data)}
           >
             <Download size={18} /> <span>Download Professional PDF</span>
+          </button>
+          <button
+            className="download-pdf-btn"
+            style={{ background: '#3b82f6', color: '#ffffff' }}
+            onClick={() => type === 'invoice' ? generateInvoicePDF(data, 'print') : generateQuotationPDF(data, 'print')}
+          >
+            <Printer size={18} /> <span>Print Document</span>
           </button>
         </div>
       )}
@@ -942,50 +1001,55 @@ const RecordDetails = ({ data, type }) => {
       )}
 
       {/* Helper Shift Breakdown */}
-      {type === 'salary' && (data.role === 'Helper' || data.rawData?.role === 'Helper') && (data.shifts || data.rawData?.shifts) && (
-        <div className="detail-section" style={{ marginTop: '20px' }}>
-          <h4 className="detail-section-title">Staff Shift Breakdown</h4>
-          <div style={{ overflowX: 'auto', marginTop: '10px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--border)', color: 'var(--text-muted)' }}>
-                  <th style={{ padding: '8px' }}>Date</th>
-                  <th style={{ padding: '8px' }}>Shift</th>
-                  <th style={{ padding: '8px' }}>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(data.shifts || data.rawData?.shifts).map((s, idx) => {
-                  if (!s) return null;
-                  return (
-                    <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '8px' }}>{s.date ? new Date(s.date).toLocaleDateString() : '—'}</td>
-                      <td style={{ padding: '8px' }}>
-                        <span style={{
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          backgroundColor: s.shift === 'Morning' ? '#DBEAFE' : '#FEF3C7',
-                          color: s.shift === 'Morning' ? '#1E40AF' : '#92400E'
-                        }}>
-                          {s.shift || 'Shift'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '8px', fontWeight: '600' }}>LKR {(s.amount || 0).toLocaleString()}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr style={{ backgroundColor: '#F8FAFC', fontWeight: 'bold' }}>
-                  <td colSpan="2" style={{ padding: '8px', textAlign: 'right' }}>Total Shift Earnings:</td>
-                  <td style={{ padding: '8px' }}>LKR {(data.shifts || data.rawData?.shifts).reduce((sum, s) => sum + s.amount, 0).toLocaleString()}</td>
-                </tr>
-              </tfoot>
-            </table>
+      {(() => {
+        const shiftsList = Array.isArray(data.shifts) ? data.shifts : Array.isArray(data.rawData?.shifts) ? data.rawData.shifts : [];
+        if (type !== 'salary' || shiftsList.length === 0) return null;
+        const totalEarnings = shiftsList.reduce((sum, s) => sum + (Number(s?.amount) || 0), 0);
+        return (
+          <div className="detail-section" style={{ marginTop: '20px' }}>
+            <h4 className="detail-section-title">Staff Shift Breakdown</h4>
+            <div style={{ overflowX: 'auto', marginTop: '10px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--border)', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '8px' }}>Date</th>
+                    <th style={{ padding: '8px' }}>Shift</th>
+                    <th style={{ padding: '8px' }}>Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shiftsList.map((s, idx) => {
+                    if (!s) return null;
+                    return (
+                      <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '8px' }}>{s.date ? new Date(s.date).toLocaleDateString() : '—'}</td>
+                        <td style={{ padding: '8px' }}>
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            backgroundColor: s.shift === 'Morning' ? '#DBEAFE' : '#FEF3C7',
+                            color: s.shift === 'Morning' ? '#1E40AF' : '#92400E'
+                          }}>
+                            {s.shift || 'Shift'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '8px', fontWeight: '600' }}>LKR {(Number(s.amount) || 0).toLocaleString()}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style={{ backgroundColor: '#F8FAFC', fontWeight: 'bold' }}>
+                    <td colSpan="2" style={{ padding: '8px', textAlign: 'right' }}>Total Shift Earnings:</td>
+                    <td style={{ padding: '8px' }}>LKR {totalEarnings.toLocaleString()}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
       {/* Audit Trail */}
       <div className="detail-section" style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px dashed var(--border)' }}>
         <h4 className="detail-section-title" style={{ fontSize: '0.75rem', opacity: 0.7 }}>Audit Trail</h4>
@@ -994,7 +1058,7 @@ const RecordDetails = ({ data, type }) => {
             <strong>Last Updated By:</strong> {data.updatedByName || data.operatorName || 'System'}
           </div>
           <div>
-            <strong>Updated At:</strong> {data.updatedAt ? new Date(data.updatedAt).toLocaleString() : new Date(data.createdAt || Date.now()).toLocaleString()}
+            <strong>Updated At:</strong> {data.updatedAt ? new Date(data.updatedAt).toLocaleString() : data.createdAt ? new Date(data.createdAt).toLocaleString() : '—'}
           </div>
         </div>
       </div>

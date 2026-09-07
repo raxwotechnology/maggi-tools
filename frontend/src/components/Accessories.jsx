@@ -5,6 +5,7 @@ import { accessoryAPI } from '../services/api';
 import { Package, PlusCircle, Search, RefreshCw, Trash2, FileText, Hash } from 'lucide-react';
 import Autocomplete from './Autocomplete';
 import '../styles/books.css';
+import { confirmDialog, toast } from '../utils/feedback';
 
 const Accessories = () => {
   const [items, setItems]           = useState([]);
@@ -22,7 +23,7 @@ const Accessories = () => {
       const res = await accessoryAPI.get();
       setItems(res.data || []);
     } catch (err) {
-      alert('Failed to load accessories: ' + (err.response?.data?.message || err.message));
+      toast.error('Failed to load accessories: ' + (err.response?.data?.message || err.message));
     } finally { setLoading(false); }
   };
 
@@ -35,29 +36,43 @@ const Accessories = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Delete this accessory?')) {
+    const ok = await confirmDialog({
+      title: 'Delete Accessory',
+      message: 'Are you sure you want to delete this accessory item?',
+      confirmText: 'Delete',
+      type: 'danger',
+    });
+    if (ok) {
       try {
         await accessoryAPI.delete(id);
+        toast.success('Accessory deleted successfully.');
         fetchData();
-      } catch (err) { alert('Delete failed: ' + (err.response?.data?.message || err.message)); }
+      } catch (err) {
+        toast.error('Delete failed: ' + (err.response?.data?.message || err.message));
+      }
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.number?.trim()) { alert('Accessory ID is required.'); return; }
+    if (!formData.number?.trim()) {
+      toast.warning('Accessory ID is required.');
+      return;
+    }
     try {
       if (editingItem) {
         await accessoryAPI.update(editingItem._id, formData);
+        toast.success('Accessory updated successfully.');
       } else {
         await accessoryAPI.create(formData);
+        toast.success('Accessory added successfully.');
       }
       setIsModalOpen(false);
       setEditingItem(null);
       setFormData({ number: '', name: '', category: '', price: '', stock: '', unit: 'pcs', description: '' });
       fetchData();
     } catch (err) {
-      alert('Save failed: ' + (err.response?.data?.message || err.message));
+      toast.error('Save failed: ' + (err.response?.data?.message || err.message));
     }
   };
 

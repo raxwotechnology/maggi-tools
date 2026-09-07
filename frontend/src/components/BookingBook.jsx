@@ -5,6 +5,7 @@ import Modal from './Modal';
 import CheckoutModal from './CheckoutModal';
 import BookingForm from './BookingForm';
 import RecordDetails from './RecordDetails';
+import ToolDropdownCell from './ToolDropdownCell';
 import { bookingAPI, clientAPI, invoiceAPI } from '../services/api';
 import api from '../services/api';
 import { generatePDFReport } from '../utils/reportGenerator';
@@ -15,6 +16,7 @@ import { Download, Eye, Search, PlusCircle, RefreshCw, Filter, Calendar as CalIc
 import '../styles/forms.css';
 import '../styles/books.css';
 import { calculateBookingCosts } from '../utils/bookingCalculations';
+import { confirmDialog, toast } from '../utils/feedback';
 
 const BookingBook = ({ setActiveTab }) => {
   const userRole = localStorage.getItem('raxwo_user_role');
@@ -56,8 +58,15 @@ const BookingBook = ({ setActiveTab }) => {
     try {
       const res = await api.get('invoices');
       const invoices = res.data || [];
-      const invoice = invoices.find(inv => inv.bookingId === booking._id) || booking;
-      generateInvoicePDF(invoice, 'print');
+      const invoice = invoices.find(inv => inv.bookingId === booking._id);
+      const printPayload = {
+        ...booking,
+        ...(invoice || {}),
+        items: (booking.items && booking.items.length > 0) ? booking.items : (invoice?.items || []),
+        accessories: (booking.accessories && booking.accessories.length > 0) ? booking.accessories : (invoice?.accessories || []),
+        totalDays: booking.totalDays || invoice?.totalDays || 1
+      };
+      generateInvoicePDF(printPayload, 'print');
     } catch (e) {
       generateInvoicePDF(booking, 'print');
     }
@@ -67,8 +76,15 @@ const BookingBook = ({ setActiveTab }) => {
     try {
       const res = await api.get('invoices');
       const invoices = res.data || [];
-      const invoice = invoices.find(inv => inv.bookingId === booking._id) || booking;
-      generateInvoicePDF(invoice, 'print');
+      const invoice = invoices.find(inv => inv.bookingId === booking._id);
+      const printPayload = {
+        ...booking,
+        ...(invoice || {}),
+        items: (booking.items && booking.items.length > 0) ? booking.items : (invoice?.items || []),
+        accessories: (booking.accessories && booking.accessories.length > 0) ? booking.accessories : (invoice?.accessories || []),
+        totalDays: booking.totalDays || invoice?.totalDays || 1
+      };
+      generateInvoicePDF(printPayload, 'print');
     } catch (e) {
       generateInvoicePDF(booking, 'print');
     }
@@ -232,30 +248,46 @@ const BookingBook = ({ setActiveTab }) => {
   };
 
   const handleProcessFollowups = async () => {
-    if (!window.confirm('Process automated follow-up SMS for overdue bookings?')) return;
+    const ok = await confirmDialog({
+      title: 'Automated Follow-up SMS',
+      message: 'Process and send automated follow-up SMS for overdue bookings?',
+      confirmText: 'Send SMS',
+      type: 'info'
+    });
+    if (!ok) return;
     setLoading(true);
     try {
       const res = await bookingAPI.processFollowups();
       setSuccess(res.data.message);
+      toast.success(res.data.message);
       fetchBookings();
       setTimeout(() => setSuccess(null), 5000);
     } catch (err) {
       setError('Failed to process follow-ups');
+      toast.error('Failed to process follow-ups');
     } finally {
       setLoading(false);
     }
   };
 
   const handleProcessOverdueCharges = async () => {
-    if (!window.confirm('Calculate and apply daily overdue charges for all active rentals?')) return;
+    const ok = await confirmDialog({
+      title: 'Calculate Overdue Charges',
+      message: 'Calculate and apply daily overdue charges for all active rentals?',
+      confirmText: 'Apply Charges',
+      type: 'warning'
+    });
+    if (!ok) return;
     setLoading(true);
     try {
       const res = await bookingAPI.processOverdueCharges();
       setSuccess(res.data.message);
+      toast.success(res.data.message);
       fetchBookings();
       setTimeout(() => setSuccess(null), 5000);
     } catch (err) {
       setError('Failed to process overdue charges');
+      toast.error('Failed to process overdue charges');
     } finally {
       setLoading(false);
     }
@@ -283,7 +315,6 @@ const BookingBook = ({ setActiveTab }) => {
 
     if (nextStatus === 'Returned') {
       setReturnRecord(record);
-      setReturnDate(new Date().toISOString().split('T')[0]);
       setReturnModalOpen(true);
       return;
     }
@@ -302,13 +333,23 @@ const BookingBook = ({ setActiveTab }) => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Delete this booking record?')) {
+    const ok = await confirmDialog({
+      title: 'Delete Booking Record',
+      message: 'Are you sure you want to delete this booking record? This action cannot be undone.',
+      confirmText: 'Delete Record',
+      type: 'danger'
+    });
+    if (ok) {
       try {
         await bookingAPI.delete(id);
         setSuccess('Booking record deleted.');
+        toast.success('Booking record deleted.');
         fetchBookings();
         setTimeout(() => setSuccess(null), 3000);
-      } catch (err) { setError('Could not delete record.'); }
+      } catch (err) {
+        setError('Could not delete record.');
+        toast.error('Could not delete record.');
+      }
     }
   };
 
@@ -320,17 +361,24 @@ const BookingBook = ({ setActiveTab }) => {
 
   const handleNotify = async (e, record) => {
     e.stopPropagation();
-    if (!record.clientPhone) return alert('No phone number found for this customer.');
-    if (!window.confirm(`Resend booking SMS to ${record.clientName}?`)) return;
+    if (!record.clientPhone) return toast.warning('No phone number found for this customer.');
+    const ok = await confirmDialog({
+      title: 'Resend Booking SMS',
+      message: `Resend booking SMS to ${record.clientName}?`,
+      confirmText: 'Resend SMS',
+      type: 'info'
+    });
+    if (!ok) return;
     setLoading(true);
     try {
       await bookingAPI.sendReminder(record._id);
       setSuccess(`SMS sent to ${record.clientName}`);
+      toast.success(`SMS sent to ${record.clientName}`);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       const errMsg = err.response?.data?.message || 'Failed to send SMS.';
       setError(errMsg);
-      alert(errMsg);
+      toast.error(errMsg);
     } finally {
       setLoading(false);
     }
@@ -338,36 +386,11 @@ const BookingBook = ({ setActiveTab }) => {
 
   const handleWhatsApp = (e, record) => {
     e.stopPropagation();
-    if (!record.clientPhone) return alert('No phone number found.');
+    if (!record.clientPhone) return toast.warning('No phone number found.');
 
     const phone = record.clientPhone.replace(/[^0-9]/g, '');
     const msg = encodeURIComponent(`Reminder from DVD Tool Rentals: Dear ${record.clientName}, your rental of ${record.tool ? record.tool.number : 'Tool'} is due on ${new Date(record.returnDate).toLocaleDateString()}. Please ensure timely return to avoid extra charges.`);
     window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
-  };
-
-  const handleReturnSubmit = async () => {
-    if (!returnRecord) return;
-    setLoading(true);
-    try {
-      const payload = {
-        returnedItems: returnedItemsState.map(it => ({ id: it.id, quantity: Number(it.returningQty), date: it.date })),
-        returnedAccessories: returnedAccsState.map(ac => ({ id: ac.id, quantity: Number(ac.returningQty), date: ac.date })),
-        paymentAmount: paymentAmount ? Number(paymentAmount) : undefined,
-        paymentMethod: paymentMethod,
-        accountId: accountId
-      };
-      
-      const res = await api.put(`/bookings/${returnRecord._id}/partial-return`, payload);
-      
-      setSuccess(`Return processed successfully. Status: ${res.data.status}`);
-      setReturnModalOpen(false);
-      fetchBookings();
-      setTimeout(() => setSuccess(null), 4000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to process return.');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleFormSubmit = async (formData) => {
@@ -433,7 +456,7 @@ const BookingBook = ({ setActiveTab }) => {
       console.error('Save failed:', err);
       const msg = err.response?.data?.message || 'Failed to save booking.';
       setError(msg);
-      alert('Booking Failed: ' + msg);
+      toast.error('Booking Failed: ' + msg);
     } finally {
       setLoading(false);
     }
@@ -606,7 +629,7 @@ const BookingBook = ({ setActiveTab }) => {
             ...r,
             'INV#': <span style={{ fontWeight: 800, color: 'var(--text-dim)' }}>{r.displayInvoiceNo || '—'}</span>,
             CUSTOMER: <strong style={{ color: 'var(--text-main)' }}>{r.clientName || '—'}</strong>,
-            TOOL: <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{r.displayTool}</span>,
+            TOOL: <ToolDropdownCell record={r} onViewDetails={() => handleView(r)} />,
             PICKUP: r.displayPickup,
             RETURN: r.displayReturn,
             DAYS: <span className="status-badge status-confirmed" style={{ background: 'var(--bg-side)', color: 'var(--text-main)' }}>{r.totalDays || 1} Days</span>,
@@ -637,7 +660,8 @@ const BookingBook = ({ setActiveTab }) => {
                       try {
                         await bookingAPI.update(r._id, { status: e.target.value });
                         fetchBookings();
-                      } catch (err) { alert('Failed to update status.'); }
+                        toast.success('Status updated to ' + e.target.value);
+                      } catch (err) { toast.error('Failed to update status.'); }
                     }}
                     onClick={e => e.stopPropagation()}
                     style={{

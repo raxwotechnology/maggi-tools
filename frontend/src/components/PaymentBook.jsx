@@ -9,6 +9,7 @@ import { Download, Search, PlusCircle, RefreshCw, FileText, Trash2, Eye } from '
 import '../styles/forms.css';
 import '../styles/books.css';
 import ToolFilter from './ToolFilter';
+import { confirmDialog, toast } from '../utils/feedback';
 
 /* ─── Helpers ────────────────────────────────────────────────── */
 const fmt = (n) => `LKR ${Number(n || 0).toLocaleString()}`;
@@ -156,14 +157,22 @@ const PaymentBook = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this payment record?')) return;
+    const ok = await confirmDialog({
+      title: 'Delete Payment Record',
+      message: 'Are you sure you want to delete this payment record?',
+      confirmText: 'Delete',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       await paymentAPI.delete(id);
       setSuccess('Record deleted.');
+      toast.success('Payment record deleted.');
       fetchRecords();
       setTimeout(() => setSuccess(null), 3000);
     } catch {
       setError('Could not delete record.');
+      toast.error('Could not delete payment record.');
       setTimeout(() => setError(null), 5000);
     }
   };

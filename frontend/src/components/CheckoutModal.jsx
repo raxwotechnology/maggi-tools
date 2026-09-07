@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import api from '../services/api';
+import { toast } from '../utils/feedback';
 import './CheckoutModal.css';
 
 // Calculate days rented from pickup to a given return date (inclusive, same-day = 0 charge)
@@ -114,11 +115,13 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
   }, 0);
 
   const transport    = Number(bookingRecord?.transportCharge) || 0;
+  const fuel         = Number(bookingRecord?.fuelCharge)      || 0;
+  const labour       = Number(bookingRecord?.labourCharge)    || 0;
   const discount     = Number(bookingRecord?.discount)        || 0;
   const extraCharges = Number(bookingRecord?.extraCharges)    || 0;
 
   // Grand total for this return session
-  const calculatedTotal = Math.max(0, itemsSubtotal + accsSubtotal + transport + extraCharges - discount);
+  const calculatedTotal = Math.max(0, itemsSubtotal + accsSubtotal + transport + fuel + labour + extraCharges - discount);
 
   // Already paid = booking-level advance + ALL per-item amountPaid typed in the form
   // This updates LIVE as user types in Paid fields because itemRows/accRows are state
@@ -181,9 +184,10 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
       };
       await api.put(`/bookings/${bookingRecord._id}/partial-return`, payload);
       if (onComplete) onComplete();
+      toast.success('Return processed successfully.');
       onClose();
     } catch (err) {
-      alert('Failed to process. ' + (err.response?.data?.message || err.message));
+      toast.error('Failed to process. ' + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
@@ -427,6 +431,16 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
           {transport > 0 && (
             <div className="rp-summary-row">
               <span>🚚 Transport</span><span>LKR {transport.toLocaleString()}</span>
+            </div>
+          )}
+          {fuel > 0 && (
+            <div className="rp-summary-row">
+              <span>⛽ Fuel / Petrol</span><span>LKR {fuel.toLocaleString()}</span>
+            </div>
+          )}
+          {labour > 0 && (
+            <div className="rp-summary-row">
+              <span>👷 Labour Charge {bookingRecord?.operatorName ? `(${bookingRecord.operatorName})` : ''}</span><span>LKR {labour.toLocaleString()}</span>
             </div>
           )}
           {extraCharges > 0 && (

@@ -5,6 +5,7 @@ import Modal from './Modal';
 import { PlusCircle, RefreshCw, Wallet, CreditCard, Banknote, FileText, Trash2, TrendingUp } from 'lucide-react';
 import '../styles/books.css';
 import AccountLedger from './AccountLedger';
+import { confirmDialog, toast } from '../utils/feedback';
 
 const Accounts = () => {
   const [records, setRecords] = useState([]);
@@ -61,11 +62,21 @@ const Accounts = () => {
   }));
 
   const handleDelete = async (id) => {
-    if (window.confirm('Delete this bank account permanently?')) {
+    const ok = await confirmDialog({
+      title: 'Delete Bank Account',
+      message: 'Are you sure you want to delete this bank account permanently? This action cannot be undone.',
+      confirmText: 'Delete Account',
+      type: 'danger',
+    });
+    if (ok) {
       try {
         await accountAPI.delete(id);
+        toast.success('Bank account deleted successfully.');
         fetchRecords();
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to delete bank account.');
+      }
     }
   };
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { vehicleAPI, employeeAPI, hireAPI, attendanceAPI, advanceAPI } from '../services/api';
 import Autocomplete from './Autocomplete';
 import '../styles/forms.css';
+import { toast } from '../utils/feedback';
 
 const SalaryForm = ({ onSubmit, onCancel, initialData }) => {
   const [vehicles, setVehicles] = useState([]);
@@ -65,12 +66,12 @@ const SalaryForm = ({ onSubmit, onCancel, initialData }) => {
 
   const calculateSalary = () => {
     if (!formData.employee) {
-      alert("Please select an employee first.");
+      toast.warning("Please select an employee first.");
       return;
     }
     const emp = employees.find(e => e.name.trim() === formData.employee.trim());
     if (!emp) {
-      alert("Selected employee not found in database.");
+      toast.warning("Selected employee not found in database.");
       return;
     }
 
@@ -94,7 +95,7 @@ const SalaryForm = ({ onSubmit, onCancel, initialData }) => {
     }
 
     if (targetMonth === -1 || targetYear === -1) {
-       alert("Invalid month format. Please use 'Month Year'.");
+       toast.warning("Invalid month format. Please use 'Month Year' (e.g. April 2026).");
        return;
     }
 

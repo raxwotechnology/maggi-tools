@@ -93,7 +93,7 @@ const setFallback = (key, data) => {
     if (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
       console.warn(`LocalStorage quota exceeded for ${key}. Data will not be cached locally.`);
       // If we still hit quota, try aggressively clearing the specific key
-      try { localStorage.removeItem(key); } catch(e) {}
+      try { localStorage.removeItem(key); } catch (_e) { /* ignore */ }
     }
   }
 };
@@ -187,6 +187,9 @@ const wrapAPI = (endpoint, storageKey) => {
 };
 
 export const accessoryAPI  = wrapAPI('accessories', 'raxwo_accessories');
+export const consumableAPI = wrapAPI('consumables', 'raxwo_consumables');
+export const consumablesAPI = consumableAPI;
+export const dieselAPI     = consumableAPI;
 export const hireAPI       = wrapAPI('hires',      'raxwo_hires');
 export const salaryAPI     = wrapAPI('salaries',   'raxwo_salaries');
 export const paymentAPI    = wrapAPI('payments',   'raxwo_payments');

@@ -12,6 +12,7 @@ import {
 } from '../utils/smsTemplate';
 import '../styles/books.css';
 import './Settings.css';
+import { toast } from '../utils/feedback';
 
 const Settings = ({ onSettingsUpdate }) => {
   const [settings, setSettings] = useState({
@@ -123,9 +124,9 @@ const Settings = ({ onSettingsUpdate }) => {
       }
       await api.put('settings', payload);
       if (onSettingsUpdate) onSettingsUpdate();
-      alert('Settings updated successfully!');
+      toast.success('Settings updated successfully!');
     } catch (err) {
-      alert('Failed to update settings: ' + (err.response?.data?.message || err.message));
+      toast.error('Failed to update settings: ' + (err.response?.data?.message || err.message));
     } finally {
       setSaving(false);
     }

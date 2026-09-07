@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { toolAPI } from '../services/api';
 import { Wrench, Hash, Zap, Calendar, Shield, CreditCard, Package, Settings, Tag, Info, Search, Truck, BatteryCharging } from 'lucide-react';
 import '../styles/forms.css';
+import { toast } from '../utils/feedback';
 
 const ToolForm = ({ onSubmit, onCancel, initialData }) => {
+  const STANDARD_CATEGORIES = ['General', 'Kitchen', 'Electric', 'Construction', 'Garden', 'Cleaning'];
+
   const [formData, setFormData] = useState({
     number: '',
     model: '',
@@ -24,12 +27,24 @@ const ToolForm = ({ onSubmit, onCancel, initialData }) => {
     financeEmiNumber: ''
   });
 
+  const [selectedCategory, setSelectedCategory] = useState('General');
+  const [customCategory, setCustomCategory] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (initialData) {
+      const isCustomCat = initialData.category && !STANDARD_CATEGORIES.includes(initialData.category);
+      if (isCustomCat) {
+        setSelectedCategory('Other');
+        setCustomCategory(initialData.category);
+      } else {
+        setSelectedCategory(initialData.category || 'General');
+        setCustomCategory('');
+      }
+
       setFormData({
         ...initialData,
+        category: initialData.category || 'General',
         warrantyExpirationDate: initialData.warrantyExpirationDate ? new Date(initialData.warrantyExpirationDate).toISOString().split('T')[0] : '',
         nextServiceDate: initialData.nextServiceDate ? new Date(initialData.nextServiceDate).toISOString().split('T')[0] : '',
         lastServiceDate: initialData.lastServiceDate ? new Date(initialData.lastServiceDate).toISOString().split('T')[0] : '',
@@ -53,23 +68,53 @@ const ToolForm = ({ onSubmit, onCancel, initialData }) => {
     return () => { cancelled = true; };
   }, [initialData]);
 
+  const handleCategoryChange = (e) => {
+    const val = e.target.value;
+    setSelectedCategory(val);
+    if (val === 'Other') {
+      setFormData(prev => ({ ...prev, category: customCategory.trim() || 'Other' }));
+    } else {
+      setFormData(prev => ({ ...prev, category: val }));
+    }
+  };
+
+  const handleCustomCategoryChange = (e) => {
+    const val = e.target.value;
+    setCustomCategory(val);
+    setFormData(prev => ({ ...prev, category: val.trim() || 'Other' }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       const payload = { ...formData };
+      if (selectedCategory === 'Other') {
+        const cat = (customCategory || '').trim();
+        if (!cat) {
+          toast.warning('Please enter a specific category name / කරුණාකර අදාළ වර්ගය ඇතුළත් කරන්න.');
+          setLoading(false);
+          return;
+        }
+        payload.category = cat;
+      } else {
+        payload.category = selectedCategory;
+      }
+
       if (!initialData && !String(payload.number || '').trim()) {
         delete payload.number;
       }
       if (initialData) {
         await toolAPI.update(initialData._id, payload);
+        toast.success('Tool updated successfully!');
       } else {
         await toolAPI.create(payload);
+        toast.success('Tool registered successfully!');
       }
       onSubmit();
     } catch (err) {
       console.error(err);
-      alert('Failed to save tool. Check if Tool ID is unique.');
+      toast.error('Failed to save tool. Check if Tool ID is unique.');
     } finally {
       setLoading(false);
     }
@@ -150,16 +195,34 @@ const ToolForm = ({ onSubmit, onCancel, initialData }) => {
               <label style={labelStyle}>Category</label>
               <div className="tool-form-select-field">
                 <Package size={16} className="tool-form-select-icon" />
-                <select className="tool-form-select" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                <select className="tool-form-select" value={selectedCategory} onChange={handleCategoryChange}>
                   <option value="General">General</option>
                   <option value="Kitchen">Kitchen / Catering</option>
                   <option value="Electric">Power Tools</option>
                   <option value="Construction">Construction</option>
                   <option value="Garden">Garden</option>
                   <option value="Cleaning">Cleaning</option>
+                  <option value="Other">Other / වෙනත් (Specify)</option>
                 </select>
               </div>
             </div>
+            {selectedCategory === 'Other' && (
+              <div className="tool-form-select-wrap" style={{ animation: 'fadeIn 0.2s ease-in-out' }}>
+                <label style={{ ...labelStyle, color: 'var(--accent)' }}>Specify Category / අදාළ වර්ගය *</label>
+                <div style={{ position: 'relative' }}>
+                  <Tag size={16} style={iconWrapStyle} />
+                  <input
+                    style={{ ...inputStyle, borderColor: 'var(--accent)' }}
+                    type="text"
+                    required
+                    placeholder="e.g. Agricultural, Woodworking, Welding..."
+                    value={customCategory}
+                    onChange={handleCustomCategoryChange}
+                    autoFocus
+                  />
+                </div>
+              </div>
+            )}
             <div className="tool-form-select-wrap">
               <label style={labelStyle}>Power Source</label>
               <div className="tool-form-select-field">

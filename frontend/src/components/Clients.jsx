@@ -3,11 +3,12 @@ import DataTable from './DataTable';
 import Modal from './Modal';
 import ClientForm from './ClientForm';
 import { clientAPI } from '../services/api';
-import { generatePDFReport } from '../utils/reportGenerator';
+import { generateGenericReportPDF } from '../utils/genericReportGenerator';
 import { Download, Search, RefreshCw, PlusCircle, Users, CheckCircle, TrendingUp, Clock, UserCheck, Phone, AlertCircle, FileText, Trash2 } from 'lucide-react';
 import '../styles/forms.css';
 import '../styles/books.css';
 import RecordDetails from './RecordDetails';
+import { confirmDialog, toast } from '../utils/feedback';
 
 const Clients = () => {
   const userRole = localStorage.getItem('raxwo_user_role');
@@ -66,13 +67,20 @@ const Clients = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this client? This action cannot be undone.')) {
+    const ok = await confirmDialog({
+      title: 'Delete Client',
+      message: 'Are you sure you want to delete this client? This action cannot be undone.',
+      confirmText: 'Delete Client',
+      type: 'danger',
+    });
+    if (ok) {
       try {
         await clientAPI.delete(id);
+        toast.success('Client deleted successfully.');
         fetchRecords();
       } catch (err) {
         console.error('Delete failed:', err);
-        alert('Failed to delete client record.');
+        toast.error('Failed to delete client record.');
       }
     }
   };
@@ -86,6 +94,21 @@ const Clients = () => {
     active: clientRecords.filter(c => c.status === 'Active').length,
     outstanding: clientRecords.reduce((sum, c) => sum + (c.outstanding || 0), 0)
   }), [clientRecords]);
+
+  const handleExportPDF = () => {
+    generateGenericReportPDF(
+      'Client Directory Report',
+      ['NAME', 'NIC', 'PHONE', 'ADDRESS', 'OUTSTANDING', 'STATUS'],
+      filteredRecords.map(c => ({
+        NAME: c.name || '—',
+        NIC: c.nic || '—',
+        PHONE: c.contact || c.phone || '—',
+        ADDRESS: c.address || '—',
+        OUTSTANDING: c.outstanding || 0,
+        STATUS: c.status || 'Active'
+      }))
+    );
+  };
 
   return (
     <div className="book-container">
@@ -105,6 +128,7 @@ const Clients = () => {
              <input type="text" placeholder="Search by name or phone..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
            </div>
             <button className="utility-icon-btn" onClick={fetchRecords} title="Refresh"><RefreshCw size={18} className={loading ? 'spinner' : ''} /></button>
+            <button className="action-icon-btn btn-print" onClick={handleExportPDF} title="Export PDF" style={{ width: '48px', height: '48px' }}><Download size={18} /></button>
           </div>
            
            {canManage && (

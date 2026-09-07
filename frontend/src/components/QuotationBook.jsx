@@ -9,6 +9,7 @@ import { generateQuotationPDF } from '../utils/billingGenerator';
 import { generatePDFReport } from '../utils/reportGenerator';
 import '../styles/forms.css';
 import '../styles/books.css';
+import { confirmDialog, toast } from '../utils/feedback';
 
 const DEFAULT_TERMS = `1. Prices are exclusive of any taxes unless mentioned.
 2. Payment must be made as per agreed terms.
@@ -69,7 +70,9 @@ const QuotationBook = () => {
           </div>
         )
       })));
-    } catch { alert('Error fetching quotations'); }
+    } catch {
+      toast.error('Error fetching quotations');
+    }
     finally { setLoading(false); }
   };
 
@@ -89,20 +92,35 @@ const QuotationBook = () => {
     try {
       if (editingItem) {
         await api.put(`/quotations/${editingItem._id}`, data);
+        toast.success('Quotation updated successfully.');
       } else {
         await api.post('/quotations', data);
+        toast.success('Quotation created successfully.');
       }
       setShowModal(false);
       setEditingItem(null);
       fetchQuotations();
-    } catch { alert('Error saving quotation'); }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error saving quotation');
+    }
     finally { setSubmitting(false); }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this quotation?')) {
-      await api.delete(`/quotations/${id}`);
-      fetchQuotations();
+    const ok = await confirmDialog({
+      title: 'Delete Quotation',
+      message: 'Are you sure you want to delete this quotation?',
+      confirmText: 'Delete',
+      type: 'danger',
+    });
+    if (ok) {
+      try {
+        await api.delete(`/quotations/${id}`);
+        toast.success('Quotation deleted.');
+        fetchQuotations();
+      } catch (err) {
+        toast.error('Failed to delete quotation.');
+      }
     }
   };
 

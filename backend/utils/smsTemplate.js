@@ -11,6 +11,8 @@ Date: {pickupDate} to {returnDate}
 Items Booked:
 {itemsBreakdown}
 Transport: {transport}
+Fuel: {fuel}
+Labour: {labour}
 Other Charges: {otherCharges}
 Deposit: {deposit}
 Discount: {discount}
@@ -44,7 +46,7 @@ const SMS_PLACEHOLDERS = [
   '{clientName}', '{clientPhone}', '{clientNic}',
   '{pickupLocation}', '{returnLocation}', '{pickupDate}', '{returnDate}',
   '{toolNo}', '{itemsBreakdown}', '{accessoriesLine}', '{notesLine}',
-  '{transport}', '{otherCharges}', '{deposit}', '{discount}',
+  '{transport}', '{fuel}', '{labour}', '{fuelCharge}', '{labourCharge}', '{otherCharges}', '{deposit}', '{discount}',
   '{totalAmount}', '{advancePayment}', '{balanceAmount}', '{companyName}',
   '{billLink}', '{detailedBill}', '{dailyRate}', '{overdueDays}', '{overdueCharge}'
 ];
@@ -69,7 +71,7 @@ function normalizeSmsText(text) {
     .filter((line) => {
       const trimmed = line.trim();
       if (!trimmed) return false;
-      return !/(^|\s)(Transport|Other Charges|Deposit|Discount|Accessories|Notes|View Bill):\s*$/i.test(trimmed);
+      return !/(^|\s)(Transport|Fuel|Labour|Other Charges|Deposit|Discount|Accessories|Notes|View Bill):\s*$/i.test(trimmed);
     })
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
@@ -207,6 +209,10 @@ function applySmsTemplate(template, bookingData, settings, precomputed = {}) {
     '{accessoriesLine}': '',
     '{notesLine}': bookingData.notes ? `Notes: ${bookingData.notes}` : '',
     '{transport}': fmtOptionalMoney(bookingData.transportCharge),
+    '{fuel}': fmtOptionalMoney(bookingData.fuelCharge),
+    '{fuelCharge}': fmtOptionalMoney(bookingData.fuelCharge),
+    '{labour}': fmtOptionalMoney(bookingData.labourCharge),
+    '{labourCharge}': fmtOptionalMoney(bookingData.labourCharge),
     '{otherCharges}': fmtOptionalMoney(bookingData.extraCharges),
     '{deposit}': fmtOptionalMoney(bookingData.securityDeposit ?? bookingData.deposit),
     '{discount}': fmtOptionalMoney(bookingData.discount),

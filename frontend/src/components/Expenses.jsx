@@ -8,6 +8,7 @@ import ToolFilter from './ToolFilter';
 import Autocomplete from './Autocomplete';
 import '../styles/forms.css';
 import '../styles/books.css';
+import { confirmDialog, toast } from '../utils/feedback';
 
 const ExpenseForm = ({ onSubmit, onCancel, initialData, tools = [], categories = [] }) => {
   const [formData, setFormData] = React.useState(initialData || { date: new Date().toISOString().split('T')[0], description: '', amount: '', category: '', toolNo: '', note: '', paymentMethod: 'Cash', accountId: '' });
@@ -214,13 +215,23 @@ const Expenses = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Delete this expense record?')) {
+    const ok = await confirmDialog({
+      title: 'Delete Expense Record',
+      message: 'Are you sure you want to delete this expense record?',
+      confirmText: 'Delete',
+      type: 'danger',
+    });
+    if (ok) {
       try {
         await expenseAPI.delete(id);
         setSuccessMsg('Record deleted');
+        toast.success('Expense record deleted.');
         fetchRecords();
         setTimeout(() => setSuccessMsg(''), 3000);
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to delete expense record.');
+      }
     }
   };
   

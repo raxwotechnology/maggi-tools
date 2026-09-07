@@ -60,11 +60,13 @@ export function calculateBookingCosts(formData, totalDays = 1) {
   const accessoriesTotal = accessoryCosts.reduce((sum, ac) => sum + ac.cost, 0);
 
   const transport = Number(formData.transportCharge) || 0;
+  const fuel = Number(formData.fuelCharge) || 0;
+  const labour = Number(formData.labourCharge) || 0;
   const discount = Number(formData.discount) || 0;
   const advance = Number(formData.advancePayment) || 0;
 
   const extraCharges = Number(formData.extraCharges) || 0;
-  const subtotal = toolsTotal + accessoriesTotal + transport + extraCharges;
+  const subtotal = toolsTotal + accessoriesTotal + transport + fuel + labour + extraCharges;
   const totalAmount = Math.max(0, subtotal - discount);
   const balanceAmount = Math.max(0, totalAmount - advance);
 
@@ -77,6 +79,10 @@ export function calculateBookingCosts(formData, totalDays = 1) {
     discount,
     advance: advance,
     transport: transport,
+    fuel: fuel,
+    labour: labour,
+    fuelCharge: fuel,
+    labourCharge: labour,
     extraCharges,
     baseAmount: subtotal,
     totalAmount,
@@ -88,6 +94,8 @@ export function buildSmsBuilderFromRecord(record) {
   if (!record) {
     return {
       transport: '',
+      fuel: '',
+      labour: '',
       otherCharges: '',
       discount: '',
       deposit: '',
@@ -98,6 +106,8 @@ export function buildSmsBuilderFromRecord(record) {
   }
   return {
     transport: record.transportCharge ?? '',
+    fuel: record.fuelCharge ?? '',
+    labour: record.labourCharge ?? '',
     otherCharges: record.extraCharges ?? '',
     discount: record.discount ?? '',
     deposit: record.securityDeposit ?? record.deposit ?? '',
@@ -135,7 +145,7 @@ ${toolNo}
 ${accStr ? `Accessories: ${accStr}` : ''}
 
 Transport: ${f(builder.transport)}
-Other Charges: ${f(builder.otherCharges)}
+${builder.fuel && Number(builder.fuel) > 0 ? `Fuel: ${f(builder.fuel)}\n` : ''}${builder.labour && Number(builder.labour) > 0 ? `Labour: ${f(builder.labour)}\n` : ''}Other Charges: ${f(builder.otherCharges)}
 Deposit: ${f(builder.deposit)}
 Discount: ${f(builder.discount)}
 --------------------

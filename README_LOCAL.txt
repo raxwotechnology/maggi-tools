@@ -1,9 +1,9 @@
-# How to run Krishan Transport System locally
+# How to run Maggi Tool Rental System locally
 
 1. Make sure you have Node.js installed.
 2. Double-click the `run-locally.bat` file in the main folder.
 3. Two separate terminal windows will open:
-   - One for the **Backend** (port 5000)
+   - One for the **Backend** (port 5001)
    - One for the **Frontend** (port 5173)
 4. The system should automatically open in your browser at `http://localhost:5173`.
 

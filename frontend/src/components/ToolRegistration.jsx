@@ -27,10 +27,7 @@ const ToolRegistration = ({ onComplete }) => {
         <ToolForm 
           onCancel={() => {}} 
           onSubmit={() => {
-              alert('Tool registered successfully!');
-              setTimeout(() => {
-                if (onComplete) onComplete();
-              }, 100);
+              if (onComplete) onComplete();
           }} 
         />
       </div>

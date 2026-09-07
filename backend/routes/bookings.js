@@ -147,9 +147,11 @@ function calcBookingTotals(body) {
   );
 
   const transport = Number(body.transportCharge) || 0;
+  const fuel = Number(body.fuelCharge) || 0;
+  const labour = Number(body.labourCharge) || 0;
   const discount = Number(body.discount) || 0;
   const advance = Number(body.advancePayment) || 0;
-  const subtotal = toolsTotal + accTotal + transport;
+  const subtotal = toolsTotal + accTotal + transport + fuel + labour;
   
   // Apply late return extra charges if not handled via returnDates
   let extra = 0;
@@ -178,6 +180,9 @@ function calcBookingTotals(body) {
     balanceAmount,
     extraCharges: extra,
     totalOverdueCharges,
+    transportCharge: transport,
+    fuelCharge: fuel,
+    labourCharge: labour,
     dailyRate: items.length === 1 ? Number(items[0].dailyRate) || 0 : 0
   };
 }
@@ -544,11 +549,32 @@ async function processBookingSideEffects(newBooking, options = {}) {
         totalUnits: newBooking.totalDays || 1,
         unitType: 'Days',
         ratePerUnit: itemsList.length === 1 ? itemsList[0].dailyRate : 0,
-        subtotal: newBooking.totalAmount || 0,
+        transportCharge: newBooking.transportCharge || 0,
+        fuelCharge: newBooking.fuelCharge || 0,
+        fuelType: newBooking.fuelType || '',
+        labourCharge: newBooking.labourCharge || 0,
+        operatorName: newBooking.operatorName || '',
+        securityDeposit: Number(newBooking.securityDeposit ?? newBooking.deposit) || 0,
+        discount: newBooking.discount || 0,
+        otherCharges: newBooking.extraCharges || 0,
+        subtotal: newBooking.baseAmount || newBooking.totalAmount || 0,
         totalAmount: newBooking.totalAmount || 0,
         advancePayment: newBooking.advancePayment || 0,
         balanceAmount: newBooking.balanceAmount || 0,
+        pickupDate: newBooking.pickupDate,
+        returnDate: newBooking.returnDate,
+        totalDays: newBooking.totalDays || 1,
         bookingId: newBooking._id,
+        items: itemsList.map(it => ({
+          toolNumber: it.toolNumber,
+          model: it.model,
+          category: it.category,
+          dailyRate: Number(it.dailyRate) || 0,
+          quantity: Number(it.quantity) || 1,
+          rentalDays: Number(it.rentalDays || newBooking.totalDays || 1),
+          totalUnits: Number(it.rentalDays || newBooking.totalDays || 1),
+          unitType: 'Days'
+        })),
         accessories: accList.map(a => ({ 
           number: a.number,
           name: a.name, 
@@ -640,6 +666,8 @@ async function processBookingSideEffects(newBooking, options = {}) {
         takenAmount: advAmt,
         hireAmount: totalAmt,
         transportCharge: newBooking.transportCharge || 0,
+        fuelCharge: newBooking.fuelCharge || 0,
+        labourCharge: newBooking.labourCharge || 0,
         otherCharges: newBooking.extraCharges || 0,
         balance: balAmt,
         status: payStatus,

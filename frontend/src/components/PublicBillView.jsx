@@ -92,6 +92,8 @@ const PublicBillView = ({ token }) => {
   });
 
   const transport = Number(booking.transportCharge) || 0;
+  const fuel = Number(booking.fuelCharge) || 0;
+  const labour = Number(booking.labourCharge) || 0;
   const otherCharges = Number(booking.extraCharges) || 0;
   const deposit = Number(booking.securityDeposit ?? booking.deposit) || 0;
   const discount = Number(booking.discount) || 0;
@@ -197,9 +199,11 @@ const PublicBillView = ({ token }) => {
 
         <div style={styles.totalsSection}>
           {/* Extra charges */}
-          {(transport > 0 || otherCharges > 0 || deposit > 0 || discount > 0 || booking.totalOverdueCharges > 0) && (
+          {(transport > 0 || fuel > 0 || labour > 0 || otherCharges > 0 || deposit > 0 || discount > 0 || booking.totalOverdueCharges > 0) && (
             <div style={styles.chargesBlock}>
               {transport > 0 && <div style={styles.chargeRow}><span>Transport</span><span>{fmt(transport)}</span></div>}
+              {fuel > 0 && <div style={styles.chargeRow}><span>Fuel / Petrol</span><span>{fmt(fuel)}</span></div>}
+              {labour > 0 && <div style={styles.chargeRow}><span>Labour Charge {booking.operatorName ? `(${booking.operatorName})` : ''}</span><span>{fmt(labour)}</span></div>}
               {otherCharges > 0 && <div style={styles.chargeRow}><span>Other Charges</span><span>{fmt(otherCharges)}</span></div>}
               {(booking.totalOverdueCharges > 0) && <div style={{ ...styles.chargeRow, color: '#dc2626', fontWeight: 600 }}><span>Late Return / Overdue Charges</span><span>+ {fmt(booking.totalOverdueCharges)}</span></div>}
               {deposit > 0 && <div style={styles.chargeRow}><span>Security Deposit</span><span>{fmt(deposit)}</span></div>}

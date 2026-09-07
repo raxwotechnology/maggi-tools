@@ -10,6 +10,7 @@ import { generateInvoicePDF } from '../utils/billingGenerator';
 import { generateGenericReportPDF } from '../utils/genericReportGenerator';
 import '../styles/forms.css';
 import '../styles/books.css';
+import { confirmDialog, toast } from '../utils/feedback';
 
 const toNum = (v) => {
   if (v == null || v === '') return 0;
@@ -123,34 +124,49 @@ const InvoiceBook = ({ initialTab }) => {
         accountId
       });
       setSuccessMsg('Payment applied successfully!');
+      toast.success('Payment applied successfully!');
       setPaymentModalOpen(false);
       fetchData();
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
-      alert('Failed to apply payment.');
+      toast.error('Failed to apply payment.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteInvoice = async (id) => {
-    if (window.confirm('Are you sure you want to delete this invoice? This cannot be undone.')) {
+    const ok = await confirmDialog({
+      title: 'Delete Invoice',
+      message: 'Are you sure you want to delete this invoice? This action cannot be undone.',
+      confirmText: 'Delete Invoice',
+      type: 'danger',
+    });
+    if (ok) {
       try {
         await api.delete(`invoices/${id}`);
+        toast.success('Invoice deleted successfully.');
         fetchData();
       } catch (err) {
-        alert('Failed to delete invoice.');
+        toast.error('Failed to delete invoice.');
       }
     }
   };
   
   const handleDeletePayment = async (id) => {
-    if (window.confirm('Delete this payment record?')) {
+    const ok = await confirmDialog({
+      title: 'Delete Payment Record',
+      message: 'Are you sure you want to delete this payment record?',
+      confirmText: 'Delete',
+      type: 'danger',
+    });
+    if (ok) {
       try {
         await paymentAPI.delete(id);
+        toast.success('Payment record deleted successfully.');
         fetchData();
       } catch {
-        alert('Failed to delete payment.');
+        toast.error('Failed to delete payment.');
       }
     }
   };
@@ -318,6 +334,28 @@ const InvoiceBook = ({ initialTab }) => {
     pendingInvoices: invoices.filter(i => i.status !== 'Paid').length,
   }), [invoices, payments]);
 
+  const handleExportPDF = () => {
+    if (activeTab === 'Invoices') {
+      generateGenericReportPDF(
+        'Invoice Directory Report',
+        ['INV#', 'DATE', 'CUSTOMER', 'TOTAL', 'BALANCE', 'STATUS'],
+        formattedInvoices
+      );
+    } else if (activeTab === 'Payments') {
+      generateGenericReportPDF(
+        'Payment History Report',
+        ['DATE', 'CLIENT', 'TOOL', 'HIRE AMT', 'PAID', 'BALANCE', 'STATUS'],
+        payments
+      );
+    } else {
+      generateGenericReportPDF(
+        'Client Financial Summaries Report',
+        ['CUSTOMER', 'TOTAL INVOICES', 'TOTAL BILLED', 'ADVANCE PAYMENTS', 'TOTAL PAID', 'OPEN BALANCE'],
+        filteredSummaries
+      );
+    }
+  };
+
   return (
     <div className="book-container">
       {/* ── Header ── */}
@@ -336,6 +374,7 @@ const InvoiceBook = ({ initialTab }) => {
              <input type="text" placeholder="Search records..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
            </div>
             <button className="utility-icon-btn" onClick={fetchData} title="Refresh"><RefreshCw size={18} className={loading ? 'spinner' : ''} /></button>
+            <button className="action-icon-btn btn-print" onClick={handleExportPDF} title="Export PDF" style={{ width: '48px', height: '48px' }}><Download size={18} /></button>
           </div>
            
         

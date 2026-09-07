@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { toolAPI, bookingAPI, employeeAPI, clientAPI, accessoryAPI, accountAPI } from '../services/api';
-import { Calendar, Package, MapPin, Hash, Info, User, Phone, Wallet, ShieldCheck, RefreshCw, TrendingUp, Plus, Trash2, FileText } from 'lucide-react';
+import { Calendar, Package, MapPin, Hash, Info, User, Phone, Wallet, ShieldCheck, RefreshCw, TrendingUp, Plus, Trash2, FileText, Layers, Fuel, Users } from 'lucide-react';
 import Autocomplete from './Autocomplete';
 import '../styles/forms.css';
 import { calculateBookingCosts } from '../utils/bookingCalculations';
+import { toast } from '../utils/feedback';
 
 const BookingForm = ({ onSubmit, onCancel, initialData }) => {
   const [availableTools, setAvailableTools] = useState([]);
@@ -21,7 +22,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
   const [customerHistory, setCustomerHistory] = useState(null);
   const [fetchingHistory, setFetchingHistory] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const MONEY_FIELDS = ['discount', 'advancePayment', 'transportCharge', 'deposit'];
+  const MONEY_FIELDS = ['discount', 'advancePayment', 'transportCharge', 'fuelCharge', 'labourCharge', 'deposit'];
 
   const sanitizeMoneyFields = (data) => {
     const next = { ...data };
@@ -49,6 +50,10 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
     discount: '',
     advancePayment: '',
     transportCharge: '',
+    fuelCharge: '',
+    fuelType: '',
+    labourCharge: '',
+    operatorName: '',
     deposit: '',
     paymentMethod: 'Cash',
     customerIdFront: '',
@@ -213,7 +218,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
 
   const handleCheckCustomer = async () => {
     const nic = (formData.clientNic || '').trim();
-    if (!nic) return alert('Please enter an ID / NIC to check.');
+    if (!nic) return toast.warning('Please enter an ID / NIC to check.');
     
     setFetchingHistory(true);
     setIsNewCustomer(false);
@@ -230,9 +235,11 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
           customerIdFront: res.data.details.customerIdFront || prev.customerIdFront,
           customerIdBack: res.data.details.customerIdBack || prev.customerIdBack
         }));
+        toast.info(`Found records for ${res.data.details.name || 'customer'}`);
       } else {
         setCustomerHistory([]);
         setIsNewCustomer(true);
+        toast.info('New customer profile initialized');
       }
     } catch (err) {
       if (err.response?.status === 404) {
@@ -244,10 +251,11 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
           clientName: '',
           clientPhone: ''
         }));
+        toast.info('New customer (NIC not previously registered)');
       } else {
         setCustomerHistory(null);
         setIsNewCustomer(false);
-        alert('Error fetching customer data.');
+        toast.error('Error fetching customer data.');
       }
     } finally {
       setFetchingHistory(false);
@@ -297,7 +305,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
       toolsTotal: calc.toolsTotal,
       accessoriesTotal: calc.accessoriesTotal
     });
-  }, [formData.items, formData.bookingAccessories, totalDays, formData.advancePayment, formData.discount, formData.transportCharge]);
+  }, [formData.items, formData.bookingAccessories, totalDays, formData.advancePayment, formData.discount, formData.transportCharge, formData.fuelCharge, formData.labourCharge]);
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...formData.items];
@@ -386,7 +394,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        alert('File size too large. Please select an image under 2MB.');
+        toast.warning('File size too large. Please select an image under 2MB.');
         return;
       }
       const reader = new FileReader();
@@ -402,25 +410,25 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
     if (isSubmitting) return;
     try {
       if (!formData.pickupDate) {
-        alert('Pickup Date is required.');
+        toast.warning('Pickup Date is required.');
         return;
       }
       if (!formData.returnDate) {
-        alert('Return Date is required.');
+        toast.warning('Return Date is required.');
         return;
       }
       if (!formData.clientName || formData.clientName.trim() === '') {
-        alert('Customer Name is required.');
+        toast.warning('Customer Name is required.');
         return;
       }
       if (formData.paymentMethod === 'Bank Transfer' && !formData.accountId) {
-        alert('Target Bank Account is required for Bank Transfers.');
+        toast.warning('Target Bank Account is required for Bank Transfers.');
         return;
       }
       const hasTools = formData.items.length > 0;
       const hasAccessories = formData.bookingAccessories.length > 0;
       if (!hasTools && !hasAccessories) {
-        alert('Please select at least one tool or accessory.');
+        toast.warning('Please select at least one tool or accessory.');
         return;
       }
 
@@ -434,6 +442,11 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
         balanceAmount: calc.balanceAmount,
         totalDays,
         securityDeposit: Number(formData.deposit) || 0,
+        transportCharge: Number(formData.transportCharge) || 0,
+        fuelCharge: Number(formData.fuelCharge) || 0,
+        fuelType: formData.fuelType || '',
+        labourCharge: Number(formData.labourCharge) || 0,
+        operatorName: formData.operatorName || '',
         extraCharges: Number(formData.extraCharges) || 0,
         accessories: formData.bookingAccessories.map(a => {
           const rDays = Number(a.rentalDays) || totalDays;
@@ -492,7 +505,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
       }
     } catch (err) {
       console.error('Submission Preparation Error:', err);
-      alert('Error preparing booking data.');
+      toast.error('Error preparing booking data.');
     }
   };
 
@@ -840,7 +853,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
                     );
                     if (found) {
                       if (found.status && found.status !== 'Available' && found.status !== 'Active' && !initialData) {
-                        alert(`Warning: This tool is currently ${found.status}. Please check availability dates.`);
+                        toast.warning(`Warning: This tool is currently ${found.status}. Please check availability dates.`);
                       }
                       addTool(found.number);
                       setToolSearch('');
@@ -1162,6 +1175,128 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
               </div>
             </div>
           </div> */}
+          {/* ── Section: Additional Services & Add-ons (Other Add-ons) ── */}
+          <div className="form-section" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+            <p className="form-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)', marginBottom: '4px' }}>
+              <Layers size={16} style={{ color: 'var(--accent)' }} /> Other Add-ons & Services (තෙල්, ලේබර් සහ අමතර සේවා)
+            </p>
+            <p style={{ margin: '0 0 16px 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              Optional services requested by customer (fuel/oil supply or dedicated labourer/operator dispatch).
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+              {/* Card 1: Fuel & Oil */}
+              <div style={{
+                background: 'var(--bg-side)',
+                border: Number(formData.fuelCharge) > 0 ? '1px solid var(--accent)' : '1px solid var(--border)',
+                borderRadius: '10px',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px dashed var(--border)', paddingBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: 'var(--text-main)', fontSize: '0.92rem' }}>
+                    <Fuel size={16} style={{ color: 'var(--accent)' }} />
+                    <span>Fuel & Oil Supply (තෙල් / Oil)</span>
+                  </div>
+                  {Number(formData.fuelCharge) > 0 && (
+                    <span style={{ fontSize: '0.72rem', background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '6px', fontWeight: 800 }}>
+                      + LKR {Number(formData.fuelCharge).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+
+                <div className="form-grid-2" style={{ gap: '12px' }}>
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.8rem' }}>Fuel / Oil Charges (LKR)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 1500"
+                      value={emptyNum(formData.fuelCharge)}
+                      onChange={onNumField('fuelCharge')}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.8rem' }}>Fuel / Oil Type</label>
+                    <select
+                      value={formData.fuelType || ''}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, fuelType: e.target.value }))}
+                    >
+                      <option value="">Select Type (Optional)</option>
+                      <option value="Petrol">Petrol</option>
+                      <option value="2T / 4T Engine Oil">2T / 4T Engine Oil</option>
+                      <option value="Diesel">Diesel</option>
+                      <option value="Kerosene">Kerosene</option>
+                      <option value="Other Lubricant">Other Lubricant</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Labour / Worker Assistance */}
+              <div style={{
+                background: 'var(--bg-side)',
+                border: Number(formData.labourCharge) > 0 ? '1px solid var(--accent)' : '1px solid var(--border)',
+                borderRadius: '10px',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px dashed var(--border)', paddingBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: 'var(--text-main)', fontSize: '0.92rem' }}>
+                    <Users size={16} style={{ color: 'var(--accent)' }} />
+                    <span>Labour / Worker Support (ලේබර්)</span>
+                  </div>
+                  {Number(formData.labourCharge) > 0 && (
+                    <span style={{ fontSize: '0.72rem', background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '6px', fontWeight: 800 }}>
+                      + LKR {Number(formData.labourCharge).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+
+                <div className="form-grid-2" style={{ gap: '12px' }}>
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.8rem' }}>Labour Charges (LKR)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 2500"
+                      value={emptyNum(formData.labourCharge)}
+                      onChange={onNumField('labourCharge')}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.8rem' }}>Assigned Staff / Worker</label>
+                    <select
+                      value={formData.operatorName || ''}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          operatorName: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">None / Self Operated</option>
+                      {employees
+                        .filter((emp) => emp.status === 'Active')
+                        .map((emp) => (
+                          <option key={emp._id} value={emp.name}>
+                            {emp.name} ({emp.role || 'Staff'})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Section: Pricing & Payment ── */}
           <div
             className="form-section"
             style={{
@@ -1325,7 +1460,21 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
               {formData.transportCharge > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                   <span>Transport Charges</span>
-                  <span>LKR {formData.transportCharge.toLocaleString()}</span>
+                  <span>LKR {Number(formData.transportCharge).toLocaleString()}</span>
+                </div>
+              )}
+
+              {formData.fuelCharge > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                  <span>Fuel / Oil Charges {formData.fuelType ? `(${formData.fuelType})` : ''}</span>
+                  <span>LKR {Number(formData.fuelCharge).toLocaleString()}</span>
+                </div>
+              )}
+
+              {formData.labourCharge > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                  <span>Labour Charges {formData.operatorName ? `(${formData.operatorName})` : ''}</span>
+                  <span>LKR {Number(formData.labourCharge).toLocaleString()}</span>
                 </div>
               )}
 

@@ -9,6 +9,7 @@ import { Download, Search, PlusCircle, RefreshCw, Package } from 'lucide-react';
 import '../styles/forms.css';
 import '../styles/books.css';
 import ToolFilter from './ToolFilter';
+import { confirmDialog, toast } from '../utils/feedback';
 
 const HireBook = () => {
   const userRole = localStorage.getItem('raxwo_user_role');
@@ -144,14 +145,22 @@ const HireBook = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Delete this rental record?')) {
+    const ok = await confirmDialog({
+      title: 'Delete Rental Record',
+      message: 'Are you sure you want to delete this rental record?',
+      confirmText: 'Delete',
+      type: 'danger',
+    });
+    if (ok) {
       try {
         await hireAPI.delete(id);
         setSuccess('Record deleted.');
+        toast.success('Rental record deleted.');
         fetchRecords();
         setTimeout(() => setSuccess(null), 3000);
       } catch (err) {
         setError('Could not delete record.');
+        toast.error('Could not delete record.');
         setTimeout(() => setError(null), 5000);
       }
     }

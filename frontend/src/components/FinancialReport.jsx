@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Download, TrendingUp, TrendingDown, Wallet, FileText, RefreshCw, Package, Calendar, Filter, Coins, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { hireAPI, bookingAPI, salaryAPI, paymentAPI, extraIncomeAPI, expenseAPI, toolAPI } from '../services/api';
+import api, { hireAPI, bookingAPI, salaryAPI, paymentAPI, extraIncomeAPI, expenseAPI, toolAPI } from '../services/api';
 import logoUrl from '../logo.png';
 import '../styles/report.css';
+import { toast } from '../utils/feedback';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -14,12 +15,21 @@ const YEARS = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
 const FinancialReport = ({ appSettings }) => {
   const [data, setData] = useState({ hires: [], bookings: [], salaries: [], payments: [], extraIncome: [], expenses: [], tools: [] });
+  const [settings, setSettings] = useState(appSettings || null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('All');
   const [selectedYear, setSelectedYear] = useState(String(currentYear));
   const [refreshing, setRefreshing] = useState(false);
   const reportRef = useRef(null);
+
+  useEffect(() => {
+    if (appSettings) {
+      setSettings(appSettings);
+    } else {
+      api.get('settings').then(res => setSettings(res.data)).catch(() => {});
+    }
+  }, [appSettings]);
 
   const fetchAll = async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -200,7 +210,7 @@ const FinancialReport = ({ appSettings }) => {
     } catch (err) {
       console.error('PDF Generation Error:', err);
       document.body.classList.remove('is-downloading');
-      alert('Could not generate PDF. Please try again.\n' + err.message);
+      toast.error('Could not generate PDF: ' + err.message);
     } finally {
       setDownloading(false);
     }
@@ -303,16 +313,16 @@ const FinancialReport = ({ appSettings }) => {
         {/* Document Corporate Header */}
         <div className="report-header">
           <div className="report-header-left">
-            <img src={logoUrl} alt="Maggi Tools Logo" className="report-logo" />
+            <img src={settings?.logo || logoUrl} alt="Company Logo" className="report-logo" />
             <div className="report-title">
-              <h2>MAGGI TOOLS RENTALS</h2>
+              <h2>{settings?.companyName || 'MAGGI TOOLS RENTALS'}</h2>
               <p>Industrial Machinery, Tools &amp; Logistics ERP</p>
             </div>
           </div>
           <div className="report-contact-info">
-            <strong>Maggi Tools Rentals (Pvt) Ltd</strong><br />
-            No. 458/A, Kandy Road, Kiribathgoda<br />
-            accounts@maggitools.lk · +94 11 485 9632
+            <strong>{settings?.companyName || 'MAGGI TOOLS RENTALS'}</strong><br />
+            {settings?.address || 'No. 241, Rajamaha Vihara Rd, Mirihana, Kotte.'}<br />
+            {settings?.email || 'sampathperera253@gmail.com'} · {Array.isArray(settings?.phones) && settings?.phones.length > 0 ? settings.phones.slice(0, 2).join(' | ') : '+94 777 782 015'}
           </div>
         </div>
         

@@ -3,12 +3,13 @@ import DataTable from './DataTable';
 import Modal from './Modal';
 import ConsumablesForm from './ConsumablesForm';
 import { dieselAPI, toolAPI } from '../services/api';
-import { generatePDFReport } from '../utils/reportGenerator';
+import { generateGenericReportPDF } from '../utils/genericReportGenerator';
 import { Download, Search, RefreshCw, PlusCircle, Fuel, Droplets, TrendingDown, Clock, Info, CheckCircle, AlertCircle, Package, FileText, Trash2 } from 'lucide-react';
 import '../styles/forms.css';
 import '../styles/books.css';
 import ToolFilter from './ToolFilter';
 import RecordDetails from './RecordDetails';
+import { confirmDialog, toast } from '../utils/feedback';
 
 const FUEL_TYPES = ['All', 'Diesel', 'Petrol', 'Electricity', 'Service Parts', 'Other'];
 
@@ -45,14 +46,22 @@ const ConsumablesBook = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this consumption log?')) return;
+    const ok = await confirmDialog({
+      title: 'Delete Consumption Log',
+      message: 'Are you sure you want to delete this fuel/consumables log?',
+      confirmText: 'Delete',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       await dieselAPI.delete(id);
       setSuccess('Entry deleted successfully!');
+      toast.success('Entry deleted successfully!');
       fetchRecords();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError('Could not delete record.');
+      toast.error('Could not delete record.');
     }
   };
 
@@ -65,15 +74,15 @@ const ConsumablesBook = () => {
         ...item,
         rawData: item,
         date: new Date(item.date).toLocaleDateString(),
-        tool_disp: <strong style={{ color: 'var(--text-main)' }}>{item.vehicle}</strong>,
+        tool_disp: <strong style={{ color: 'var(--text-main)' }}>{item.toolId || item.vehicle || '—'}</strong>,
         fuelType_disp: (
           <span className={`status-badge ${item.fuelType === 'Petrol' ? 'status-confirmed' : 'status-active'}`} style={item.fuelType === 'Petrol' ? { background: 'var(--accent-soft)', color: 'var(--accent)' } : {}}>
-            {item.fuelType || 'Diesel'}
+            {item.consumableType || item.fuelType || 'Diesel'}
           </span>
         ),
         driver: item.employee || '—',
-        liters_disp: <span style={{ fontWeight: 700 }}>{item.liters} Units</span>,
-        totalCost: <strong style={{ color: 'var(--text-main)' }}>LKR {(item.total || 0).toLocaleString()}</strong>,
+        liters_disp: <span style={{ fontWeight: 700 }}>{item.quantity != null ? item.quantity : item.liters} Units</span>,
+        totalCost: <strong style={{ color: 'var(--text-main)' }}>LKR {(item.total || (Number(item.quantity || item.liters || 0) * Number(item.pricePerUnit || item.pricePerLiter || 0))).toLocaleString()}</strong>,
         status_disp: (
           <span className={`status-badge ${item.status === 'Verified' ? 'status-completed' : 'status-active'}`}>
             {item.status || 'Logged'}
@@ -115,6 +124,14 @@ const ConsumablesBook = () => {
     const avgPrice    = totalLiters > 0 ? totalCost / totalLiters : 0;
     return { totalLiters, totalCost, avgPrice };
   }, [filteredRecords]);
+
+  const handleExportPDF = () => {
+    generateGenericReportPDF(
+      'Consumables & Fuel Usage Report',
+      ['DATE', 'TOOL', 'TYPE', 'STAFF', 'QTY/UNITS', 'TOTAL COST', 'STATUS'],
+      filteredRecords
+    );
+  };
 
   return (
     <div className="book-container">
@@ -175,7 +192,7 @@ const ConsumablesBook = () => {
             <ToolFilter tools={tools} selectedTool={selectedTool} onSelect={setSelectedTool} />
           </div>
         </div>
-        <button className="action-icon-btn btn-print" onClick={() => {}} title="Export PDF" style={{ width: '48px', height: '48px' }}><Download size={18} /></button>
+        <button className="action-icon-btn btn-print" onClick={handleExportPDF} title="Export PDF" style={{ width: '48px', height: '48px' }}><Download size={18} /></button>
       </div>
 
       {success && <div className="form-info-banner" style={{ background: 'var(--success)', color: '#fff', border: 'none' }}><CheckCircle size={18} /> {success}</div>}

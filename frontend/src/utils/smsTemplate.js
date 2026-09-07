@@ -9,6 +9,8 @@ Date: {pickupDate} to {returnDate}
 Items Booked:
 {itemsBreakdown}
 Transport: {transport}
+Fuel: {fuel}
+Labour: {labour}
 Other Charges: {otherCharges}
 Deposit: {deposit}
 Discount: {discount}
@@ -53,7 +55,7 @@ export const SMS_PLACEHOLDER_GROUPS = [
   },
   {
     title: 'Amounts',
-    keys: ['{transport}', '{otherCharges}', '{deposit}', '{discount}', '{totalAmount}', '{advancePayment}', '{balanceAmount}', '{dailyRate}', '{overdueCharge}']
+    keys: ['{transport}', '{fuel}', '{labour}', '{fuelCharge}', '{labourCharge}', '{otherCharges}', '{deposit}', '{discount}', '{totalAmount}', '{advancePayment}', '{balanceAmount}', '{dailyRate}', '{overdueCharge}']
   },
   {
     title: 'Other',
@@ -106,7 +108,7 @@ function normalizeSmsText(text) {
     .filter((line) => {
       const trimmed = line.trim();
       if (!trimmed) return false;
-      return !/(^|\s)(Transport|Other Charges|Deposit|Discount|Accessories|Notes|View Bill):\s*$/i.test(trimmed);
+      return !/(^|\s)(Transport|Fuel|Labour|Other Charges|Deposit|Discount|Accessories|Notes|View Bill):\s*$/i.test(trimmed);
     })
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
@@ -202,11 +204,7 @@ export function resolveBookingTemplate(stored, companyName = 'MAGGI TOOLS') {
 
 export function previewSmsTemplate(template, companyName = 'MAGGI TOOLS') {
   const booking = { ...SAMPLE_BOOKING };
-  const itemsList = booking.items || [];
-  const accList = booking.accessories || [];
   const itemsBreakdown = buildItemsBreakdown(booking);
-  const toolNo = itemsList.map((it) => getBookedItemName(it)).filter(Boolean).join(' / ');
-  const accStr = accList.map((a) => `${a.name} (x${a.quantity})`).join(', ');
   const billLink = buildSampleBillLink();
 
   const replacements = {
@@ -222,6 +220,10 @@ export function previewSmsTemplate(template, companyName = 'MAGGI TOOLS') {
     '{accessoriesLine}': '',
     '{notesLine}': booking.notes ? `Notes: ${booking.notes}` : '',
     '{transport}': fmtOptionalMoney(booking.transportCharge),
+    '{fuel}': fmtOptionalMoney(booking.fuelCharge),
+    '{fuelCharge}': fmtOptionalMoney(booking.fuelCharge),
+    '{labour}': fmtOptionalMoney(booking.labourCharge),
+    '{labourCharge}': fmtOptionalMoney(booking.labourCharge),
     '{otherCharges}': fmtOptionalMoney(booking.extraCharges),
     '{deposit}': fmtOptionalMoney(booking.securityDeposit),
     '{discount}': fmtOptionalMoney(booking.discount),
@@ -249,7 +251,7 @@ export function previewSmsTemplate(template, companyName = 'MAGGI TOOLS') {
 }
 
 export function previewAdvanceSmsTemplate(template, settings = {}) {
-  const companyName = 'MAGGI TOOLS';
+  const companyName = settings?.companyName || 'MAGGI TOOLS';
   const billLink = 'View Bill: https://maggi-tools.netlify.app/bill/sample-token';
   let result = (template && template.trim()) ? template.trim() : DEFAULT_SMS_ADVANCE_TEMPLATE;
   const replacements = {

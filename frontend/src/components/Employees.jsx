@@ -8,6 +8,7 @@ import { Download, Search, UserPlus, RefreshCw, FileText, Trash2, PlusCircle } f
 import '../styles/forms.css';
 import '../styles/books.css';
 import RecordDetails from './RecordDetails';
+import { confirmDialog, toast } from '../utils/feedback';
 
 const Employees = () => {
   const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -99,14 +100,22 @@ const Employees = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this employee?')) {
+    const ok = await confirmDialog({
+      title: 'Delete Employee',
+      message: 'Are you sure you want to delete this employee? This action cannot be undone.',
+      confirmText: 'Delete Employee',
+      type: 'danger',
+    });
+    if (ok) {
       try {
         await employeeAPI.delete(id);
         setSuccess('Employee removed.');
+        toast.success('Employee removed successfully.');
         fetchRecords();
         setTimeout(() => setSuccess(null), 3000);
       } catch (err) {
         setError('Error deleting record.');
+        toast.error('Error deleting employee record.');
         setTimeout(() => setError(null), 5000);
       }
     }

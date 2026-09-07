@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { employeeAPI, hireAPI, attendanceAPI, salaryAPI, advanceAPI } from '../services/api';
 import { RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react';
+import { confirmDialog, toast } from '../utils/feedback';
 
 const SalaryGeneratorModal = ({ onClose, onComplete }) => {
   const [month, setMonth] = useState(new Date().toLocaleString('default', { month: 'long', year: 'numeric' }));
@@ -65,7 +66,7 @@ const SalaryGeneratorModal = ({ onClose, onComplete }) => {
     }
 
     if (targetMonth === -1 || targetYear === -1) {
-      alert("Please enter a valid month (e.g. April 2026)");
+      toast.warning("Please enter a valid month (e.g. April 2026)");
       setCalculating(false);
       return;
     }
@@ -135,22 +136,29 @@ const SalaryGeneratorModal = ({ onClose, onComplete }) => {
   const handleSaveAll = async () => {
     const toSave = results.filter(r => !r.exists);
     if (toSave.length === 0) {
-      alert("No new salary records to save (either already exist or no earnings).");
+      toast.info("No new salary records to save (either already exist or no earnings).");
       return;
     }
 
-    if (!window.confirm(`Save ${toSave.length} salary records for ${month}?`)) return;
+    const ok = await confirmDialog({
+      title: 'Batch Generate Salaries',
+      message: `Save ${toSave.length} salary records for ${month}?`,
+      confirmText: 'Save Records',
+      type: 'info',
+    });
+    if (!ok) return;
 
     setSaving(true);
     try {
       for (const record of toSave) {
         await salaryAPI.create(record);
       }
-      alert(`Successfully saved ${toSave.length} records!`);
+      toast.success(`Successfully saved ${toSave.length} records!`);
       onComplete();
       onClose();
     } catch (err) {
-      alert("Error saving some records. Check console.");
+      console.error(err);
+      toast.error("Error saving some records. Check console.");
     } finally {
       setSaving(false);
     }

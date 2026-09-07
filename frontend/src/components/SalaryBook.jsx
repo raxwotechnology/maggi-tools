@@ -10,6 +10,7 @@ import '../styles/books.css';
 import RecordDetails from './RecordDetails';
 import SalaryGeneratorModal from './SalaryGeneratorModal';
 import AdvanceForm from './AdvanceForm';
+import { confirmDialog, toast } from '../utils/feedback';
 
 const SalaryBook = () => {
   const userRole = localStorage.getItem('raxwo_user_role');
@@ -230,7 +231,19 @@ const SalaryBook = () => {
                   amount: <strong style={{ color: 'var(--danger)' }}>LKR {a.amount.toLocaleString()}</strong>,
                   action: (
                     <div className="table-actions">
-                      <button className="action-icon-btn btn-delete" onClick={async () => { if(window.confirm('Delete this advance?')) { await advanceAPI.delete(a._id); fetchBaseData(); } }} title="Delete Advance">
+                      <button className="action-icon-btn btn-delete" onClick={async () => {
+                        const ok = await confirmDialog({
+                          title: 'Delete Advance',
+                          message: 'Are you sure you want to delete this salary advance record?',
+                          confirmText: 'Delete',
+                          type: 'danger',
+                        });
+                        if (ok) {
+                          await advanceAPI.delete(a._id);
+                          toast.success('Advance deleted successfully.');
+                          fetchBaseData();
+                        }
+                      }} title="Delete Advance">
                         <Trash2 />
                       </button>
                     </div>
@@ -246,7 +259,7 @@ const SalaryBook = () => {
       </Modal>
 
       <Modal isOpen={advanceModalOpen} onClose={() => setAdvanceModalOpen(false)} title="Record Salary Advance">
-        <AdvanceForm employees={employees} currentMonth={targetMonth} onSubmit={async (d) => { await advanceAPI.create(d); setAdvanceModalOpen(false); fetchBaseData(); }} onCancel={() => setAdvanceModalOpen(false)} />
+        <AdvanceForm employees={employees} currentMonth={targetMonth} onSubmit={async (d) => { await advanceAPI.create(d); setAdvanceModalOpen(false); fetchBaseData(); toast.success('Advance recorded successfully!'); }} onCancel={() => setAdvanceModalOpen(false)} />
       </Modal>
 
       <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingItem(null); }} title={editingItem?._id?.startsWith('live') ? 'Finalize Salary' : 'Edit Salary'}>
@@ -256,16 +269,18 @@ const SalaryBook = () => {
               if (editingItem?._id?.startsWith('live')) {
                 await salaryAPI.create(d);
                 setSuccess('Salary finalized successfully!');
+                toast.success('Salary finalized successfully!');
               } else {
                 await salaryAPI.update(editingItem._id, d);
                 setSuccess('Salary record updated!');
+                toast.success('Salary record updated!');
               }
               setIsModalOpen(false); 
               fetchBaseData();
               setTimeout(() => setSuccess(null), 3000);
             } catch (err) {
               console.error(err);
-              alert('Failed to save salary record: ' + (err.response?.data?.message || err.message));
+              toast.error('Failed to save salary record: ' + (err.response?.data?.message || err.message));
             }
           }} 
           onCancel={() => setIsModalOpen(false)} 

@@ -1,0 +1,369 @@
+/* ═══════════════════════════════════════════════════════
+   TOOL DROPDOWN CELL — Sleek Multi-Tool Popover for Tables
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Single tool pill ── */
+.tool-single-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  background: var(--bg-side, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-main, #1e293b);
+  white-space: nowrap;
+  max-width: 190px;
+}
+
+.tool-single-pill .tool-pill-icon {
+  color: var(--accent, #6366f1);
+  flex-shrink: 0;
+}
+
+.tool-single-pill .tool-pill-number {
+  color: var(--accent, #6366f1);
+  letter-spacing: -0.01em;
+}
+
+.tool-single-pill .tool-pill-model {
+  color: var(--text-dim, #64748b);
+  font-size: 0.74rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Dropdown trigger button ── */
+.tool-dropdown-container {
+  display: inline-flex;
+  position: relative;
+}
+
+.tool-dropdown-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  background: var(--accent-soft, #eef2ff);
+  color: var(--accent, #4f46e5);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  user-select: none;
+}
+
+.tool-dropdown-btn:hover {
+  background: var(--accent, #6366f1);
+  color: #ffffff;
+  border-color: var(--accent, #6366f1);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+  transform: translateY(-1px);
+}
+
+.tool-dropdown-btn:hover .tool-btn-icon,
+.tool-dropdown-btn:hover .tool-btn-chevron {
+  color: #ffffff;
+}
+
+.tool-dropdown-btn.is-open {
+  background: var(--accent, #6366f1);
+  color: #ffffff;
+  border-color: var(--accent, #6366f1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
+}
+
+.tool-dropdown-btn.is-open .tool-btn-icon,
+.tool-dropdown-btn.is-open .tool-btn-chevron {
+  color: #ffffff;
+}
+
+.tool-btn-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.tool-btn-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.tool-btn-chevron.rotate {
+  transform: rotate(180deg);
+}
+
+/* ── Popover Box (Rendered in Portal) ── */
+.tool-popover-portal {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: toolPopoverFadeIn 0.15s ease-out;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+@keyframes toolPopoverFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Popover Header ── */
+.tool-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-soft, #f1f5f9);
+  background: var(--bg-side, #f8fafc);
+}
+
+.tool-popover-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool-popover-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--text-main, #0f172a);
+  letter-spacing: -0.01em;
+}
+
+.tool-popover-badge {
+  background: var(--accent-soft, #eef2ff);
+  color: var(--accent, #4f46e5);
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.tool-popover-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim, #94a3b8);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tool-popover-close-btn:hover {
+  background: var(--bg-main, #e2e8f0);
+  color: var(--text-main, #0f172a);
+}
+
+/* ── Search filter row ── */
+.tool-popover-search-box {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-soft, #f1f5f9);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-card, #ffffff);
+}
+
+.tool-popover-search-box input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.78rem;
+  color: var(--text-main, #0f172a);
+}
+
+.tool-popover-search-box input::placeholder {
+  color: var(--text-dim, #94a3b8);
+}
+
+.tool-popover-search-icon {
+  color: var(--text-dim, #94a3b8);
+  flex-shrink: 0;
+}
+
+/* ── Tool Items List ── */
+.tool-popover-list {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tool-popover-list::-webkit-scrollbar {
+  width: 5px;
+}
+.tool-popover-list::-webkit-scrollbar-thumb {
+  background: var(--border, #cbd5e1);
+  border-radius: 4px;
+}
+
+.tool-popover-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-soft, #f1f5f9);
+  transition: background 0.15s ease;
+  gap: 10px;
+}
+
+.tool-popover-item:hover {
+  background: var(--bg-side, #f8fafc);
+  border-color: var(--border, #e2e8f0);
+}
+
+.tool-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tool-item-primary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tool-item-tag {
+  font-family: monospace;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--accent, #4f46e5);
+  background: var(--accent-soft, #eef2ff);
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.tool-item-model {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-main, #1e293b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
+}
+
+.tool-item-sub {
+  font-size: 0.68rem;
+  color: var(--text-dim, #94a3b8);
+  font-weight: 500;
+}
+
+.tool-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.tool-item-qty {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--bg-side, #f1f5f9);
+  color: var(--text-muted, #475569);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border-soft, #e2e8f0);
+}
+
+.tool-popover-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: var(--text-dim, #94a3b8);
+  font-size: 0.76rem;
+}
+
+/* ── Popover Footer ── */
+.tool-popover-footer {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-soft, #f1f5f9);
+  background: var(--bg-side, #f8fafc);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.tool-popover-view-btn {
+  background: transparent;
+  border: none;
+  color: var(--accent, #4f46e5);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.tool-popover-view-btn:hover {
+  background: var(--accent-soft, #eef2ff);
+  text-decoration: underline;
+}
+
+/* ── Dark theme tweaks ── */
+[data-theme='dark'] .tool-popover-portal {
+  background: rgba(17, 24, 39, 0.95);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme='dark'] .tool-popover-header,
+[data-theme='dark'] .tool-popover-footer {
+  background: rgba(31, 41, 55, 0.6);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .tool-popover-search-box {
+  background: rgba(17, 24, 39, 0.8);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .tool-popover-item {
+  background: rgba(31, 41, 55, 0.4);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='dark'] .tool-popover-item:hover {
+  background: rgba(55, 65, 81, 0.6);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme='dark'] .tool-single-pill {
+  background: rgba(31, 41, 55, 0.5);
+  border-color: rgba(255, 255, 255, 0.1);
+}

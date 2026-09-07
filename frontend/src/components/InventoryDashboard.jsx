@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import Tools from './Tools';
 import Accessories from './Accessories';
 import StockInventory from './StockInventory';
-import { Package, Box, LayoutGrid } from 'lucide-react';
+import ConsumablesBook from './ConsumablesBook';
+import { Package, Box, LayoutGrid, Fuel } from 'lucide-react';
 import '../styles/books.css';
 import './InventoryDashboard.css';
 
 const TABS = [
   { key: 'tools',       label: 'Tool Inventory',      Icon: Package    },
   { key: 'accessories', label: 'Parts & Accessories',  Icon: Box        },
+  { key: 'consumables', label: 'Fuel & Consumables',  Icon: Fuel       },
   { key: 'stock',       label: 'Stock Overview',       Icon: LayoutGrid },
 ];
 
@@ -36,6 +38,7 @@ const InventoryDashboard = () => {
       <div className="inventory-content">
         {activeTab === 'tools'       && <Tools />}
         {activeTab === 'accessories' && <Accessories />}
+        {activeTab === 'consumables' && <ConsumablesBook />}
         {activeTab === 'stock'       && <StockInventory />}
       </div>
     </div>

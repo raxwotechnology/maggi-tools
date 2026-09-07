@@ -22,8 +22,8 @@ import Login from './components/Login';
 import AuditLog from './components/AuditLog';
 import RoleSelection from './components/RoleSelection';
 import ToolRegistration from './components/ToolRegistration';
-import HireBook from './components/HireBook';
 import Settings from './components/Settings';
+import { alertDialog } from './utils/feedback';
 import './App.css';
 import './styles/Modal.css';
 
@@ -93,18 +93,33 @@ const App = () => {
     });
   };
 
+  const isAdminOrManager = ['admin', 'manager'].includes(String(userRole || '').toLowerCase());
+  const staffAllowedTabs = ['dashboard', 'bookings', 'inventory', 'compliance', 'tool-reg'];
+
+  // Keep non-admin/manager users confined to staffAllowedTabs
+  useEffect(() => {
+    if (isAuthenticated && !isAdminOrManager && !staffAllowedTabs.includes(activeTab)) {
+      setActiveTab('dashboard');
+    }
+  }, [isAuthenticated, isAdminOrManager, activeTab]);
+
   const handleLogout = () => {
     localStorage.removeItem('raxwo_auth_token');
     localStorage.removeItem('raxwo_user_role');
     localStorage.removeItem('raxwo_user_name');
     setIsAuthenticated(false);
     setSelectedRole(null);
+    setActiveTab('dashboard');
   };
 
   useEffect(() => {
     const handleForceLogout = () => {
       handleLogout();
-      alert('Your session has expired or is invalid. Please log in again.');
+      alertDialog({
+        title: 'Session Expired',
+        message: 'Your session has expired or is invalid. Please log in again.',
+        type: 'warning',
+      });
     };
     window.addEventListener('raxwo_force_logout', handleForceLogout);
     return () => window.removeEventListener('raxwo_force_logout', handleForceLogout);
@@ -115,9 +130,8 @@ const App = () => {
   // (Previously a 15-minute inactivity timer was here)
 
   const renderContent = () => {
-    const restrictedTabs = ['employees', 'reports', 'salaries', 'clients', 'payments', 'invoices', 'quotations', 'extraIncome', 'expenses', 'attendance', 'hires', 'accounts', 'cheques'];
-    if (userRole === 'Employee' && restrictedTabs.includes(activeTab)) {
-      return <Dashboard key={activeTab} role={userRole} name={userName} setActiveTab={setActiveTab} />;
+    if (!isAdminOrManager && !staffAllowedTabs.includes(activeTab)) {
+      return <Dashboard key="dashboard" role={userRole} name={userName} setActiveTab={setActiveTab} />;
     }
 
     switch (activeTab) {
@@ -151,7 +165,10 @@ const App = () => {
     return (
       <Login
         roleContext={selectedRole}
-        onLoginSuccess={() => setIsAuthenticated(true)}
+        onLoginSuccess={() => {
+          setActiveTab('dashboard');
+          setIsAuthenticated(true);
+        }}
         onBack={() => setSelectedRole(null)}
         appSettings={appSettings}
       />

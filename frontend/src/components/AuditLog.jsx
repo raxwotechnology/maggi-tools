@@ -50,8 +50,15 @@ const AuditLog = () => {
   const handleExportPDF = () => {
     generateGenericReportPDF('Global Audit Log Report', ['USER', 'RECORD TYPE', 'REFERENCE', 'DATE', 'TIME'], filteredLogs.map(l => ({
         ...l,
+        'USER': l.updatedByName || l.operatorName || 'System',
+        'RECORD TYPE': l._type || 'Audit',
+        'REFERENCE': l._ref || '—',
+        'DATE': new Date(l.updatedAt || l.createdAt).toLocaleDateString(),
+        'TIME': new Date(l.updatedAt || l.createdAt).toLocaleTimeString(),
         user: l.updatedByName || l.operatorName || 'System',
-        recordtype: l._type,
+        recordType: l._type || 'Audit',
+        recordtype: l._type || 'Audit',
+        _type: l._type || 'Audit',
         reference: l._ref,
         date: new Date(l.updatedAt || l.createdAt).toLocaleDateString(),
         time: new Date(l.updatedAt || l.createdAt).toLocaleTimeString()

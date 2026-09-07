@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { clientAPI, toolAPI, accountAPI } from '../services/api';
+import api, { clientAPI, toolAPI, accountAPI, accessoryAPI } from '../services/api';
 import Autocomplete from './Autocomplete';
 import '../styles/forms.css';
 
@@ -19,6 +19,8 @@ const defaultForm = () => ({
   items: [], // [{ toolNumber, model, category, dailyRate, totalUnits, unitType }]
   accessories: [], // { number, name, quantity, price }
   transportCharge: 0,
+  fuelCharge: 0,
+  labourCharge: 0,
   otherCharges: 0,
   discount: 0,
   advancePayment: 0,
@@ -32,8 +34,8 @@ const calcTotal = (d) => {
   const itemsTotal = (d.items || []).reduce((sum, it) => sum + (Number(it.dailyRate || 0) * Number(it.totalUnits || d.totalUnits || 0)), 0);
   const accTotal = (d.accessories || []).reduce((sum, a) => sum + (Number(a.price || 0) * Number(a.quantity || 0)), 0);
   const legacyTotal = (!d.items || d.items.length === 0) ? (Number(d.totalUnits || 0) * Number(d.ratePerUnit || 0)) : 0;
-  const transport = Number(d.transportCharge || 0) + Number(d.otherCharges || 0);
-  const total = itemsTotal + accTotal + legacyTotal + transport - Number(d.discount || 0);
+  const extraTotal = Number(d.transportCharge || 0) + Number(d.fuelCharge || 0) + Number(d.labourCharge || 0) + Number(d.otherCharges || 0);
+  const total = itemsTotal + accTotal + legacyTotal + extraTotal - Number(d.discount || 0);
   return +total.toFixed(2);
 };
 
@@ -74,7 +76,7 @@ const InvoiceForm = ({ onSubmit, onCancel, initialData }) => {
         clientAPI.get(),
         toolAPI.get(),
         accountAPI.get(),
-        api.get('accessories')
+        accessoryAPI.get()
       ]);
       setClients(Array.isArray(cRes.data) ? cRes.data : []);
       setTools(Array.isArray(tRes.data) ? tRes.data : []);
@@ -298,6 +300,16 @@ const InvoiceForm = ({ onSubmit, onCancel, initialData }) => {
               <label>Transport Charge</label>
               <input type="number" name="transportCharge" value={formData.transportCharge} onChange={handleChange} />
             </div>
+            <div className="form-group">
+              <label>Fuel / Petrol Charge</label>
+              <input type="number" name="fuelCharge" value={formData.fuelCharge} onChange={handleChange} />
+            </div>
+            <div className="form-group">
+              <label>Labour Charge</label>
+              <input type="number" name="labourCharge" value={formData.labourCharge} onChange={handleChange} />
+            </div>
+          </div>
+          <div className="form-grid-3" style={{ marginTop: '12px' }}>
             <div className="form-group">
               <label>Other Charges</label>
               <input type="number" name="otherCharges" value={formData.otherCharges} onChange={handleChange} />

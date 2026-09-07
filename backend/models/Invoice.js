@@ -15,6 +15,8 @@ const InvoiceSchema = new mongoose.Schema({
     model: String,
     category: String,
     dailyRate: Number,
+    quantity: { type: Number, default: 1 },
+    rentalDays: Number,
     totalUnits: Number,
     unitType: String
   }],
@@ -28,9 +30,17 @@ const InvoiceSchema = new mongoose.Schema({
   
   // Additional Charges
   transportCharge: { type: Number, default: 0 },
+  fuelCharge: { type: Number, default: 0 },
+  fuelType: { type: String, default: '' },
+  labourCharge: { type: Number, default: 0 },
+  operatorName: { type: String, default: '' },
   otherCharges: { type: Number, default: 0 },
   otherChargesDescription: { type: String },
+  securityDeposit: { type: Number, default: 0 },
   discount: { type: Number, default: 0 },
+  pickupDate: { type: Date },
+  returnDate: { type: Date },
+  totalDays: { type: Number, default: 1 },
   
   // Totals
   subtotal: { type: Number, default: 0 },

@@ -4,6 +4,7 @@ import DataTable from './DataTable';
 import Modal from './Modal';
 import { PlusCircle, CheckCircle, XCircle, Clock, Search, Filter } from 'lucide-react';
 import '../styles/books.css';
+import { toast } from '../utils/feedback';
 
 const Cheques = () => {
   const [records, setRecords] = useState([]);
@@ -37,13 +38,17 @@ const Cheques = () => {
 
   const handleStatusChange = async (id, newStatus, accountId) => {
     if (newStatus === 'Accepted' && !accountId) {
-      alert('Please select a bank account to deposit this cheque.');
+      toast.warning('Please select a bank account to deposit this cheque.');
       return;
     }
     try {
       await chequeAPI.update(id, { status: newStatus, accountId });
+      toast.success(`Cheque status updated to ${newStatus}`);
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to update cheque status.');
+    }
   };
 
   const columns = ['DATE', 'CHEQUE #', 'CLIENT', 'BANK', 'AMOUNT', 'TYPE', 'STATUS', 'ACTIONS'];

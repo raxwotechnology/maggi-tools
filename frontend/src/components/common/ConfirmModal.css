@@ -1,0 +1,227 @@
+/* ═══════════════════════════════════════════
+   RAXWO CONFIRM & ALERT MODALS — Premium v2
+   ═══════════════════════════════════════════ */
+
+.raxwo-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(7, 9, 26, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: dialogFadeIn 0.2s ease forwards;
+}
+
+.raxwo-dialog {
+  background: var(--bg-card);
+  border-radius: var(--r-xl);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg), 0 20px 50px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 460px;
+  padding: 28px 26px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  animation: dialogPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes dialogFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dialogPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ── Top accent stripe ── */
+.raxwo-dialog::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent-gradient);
+}
+
+.raxwo-dialog.dialog-danger::before {
+  background: linear-gradient(90deg, var(--danger), #f43f5e);
+}
+
+.raxwo-dialog.dialog-warning::before {
+  background: linear-gradient(90deg, var(--warning), #fb923c);
+}
+
+.raxwo-dialog.dialog-success::before {
+  background: linear-gradient(90deg, var(--success), #34d399);
+}
+
+/* ── Icon Circle ── */
+.dialog-icon-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+  flex-shrink: 0;
+  animation: iconPulse 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dialog-icon-circle svg {
+  width: 28px;
+  height: 28px;
+}
+
+.dialog-danger .dialog-icon-circle {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.dialog-warning .dialog-icon-circle {
+  background: var(--warning-soft);
+  color: var(--warning);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.dialog-info .dialog-icon-circle,
+.dialog-primary .dialog-icon-circle {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+}
+
+.dialog-success .dialog-icon-circle {
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+@keyframes iconPulse {
+  0% { transform: scale(0.6); opacity: 0; }
+  70% { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── Typography ── */
+.dialog-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0 0 10px 0;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+.dialog-message {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: 0 0 24px 0;
+  word-break: break-word;
+  white-space: pre-line;
+}
+
+/* ── Actions Row ── */
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  justify-content: center;
+}
+
+.dialog-btn {
+  flex: 1;
+  padding: 11px 18px;
+  border-radius: var(--r-md);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  outline: none;
+}
+
+.dialog-btn-cancel {
+  background: var(--bg-main);
+  color: var(--text-main);
+  border-color: var(--border);
+}
+
+.dialog-btn-cancel:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: var(--text-dim);
+}
+
+[data-theme='dark'] .dialog-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dialog-btn-confirm {
+  color: #ffffff;
+  background: var(--accent-gradient);
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+
+.dialog-btn-confirm:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px var(--accent-glow);
+}
+
+.dialog-btn-danger {
+  color: #ffffff;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+}
+
+.dialog-btn-danger:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.45);
+}
+
+.dialog-btn-warning {
+  color: #1a1a1a;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+}
+
+.dialog-btn-warning:hover {
+  transform: translateY(-1px);
+}
+
+/* ── Mobile Layout ── */
+@media (max-width: 480px) {
+  .raxwo-dialog {
+    padding: 22px 18px 20px;
+    border-radius: var(--r-lg);
+  }
+  .dialog-actions {
+    flex-direction: column-reverse;
+  }
+  .dialog-btn {
+    width: 100%;
+  }
+}

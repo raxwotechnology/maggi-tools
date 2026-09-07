@@ -1,9 +1,9 @@
 @echo off
-TITLE Raxwo Rent A Car System - Launcher
+TITLE Maggi Tool Rental System - Launcher
 COLOR 0B
 
 echo ===================================================
-echo   RAXWO RENT A CAR MANAGEMENT SYSTEM
+echo   MAGGI TOOL RENTAL MANAGEMENT SYSTEM
 echo ===================================================
 echo.
 echo [1/2] Launching Backend Server (Node.js) on port 5001...
