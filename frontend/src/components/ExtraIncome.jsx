@@ -181,7 +181,13 @@ const ExtraIncome = () => {
       setIsModalOpen(false);
       setEditingRecord(null);
       setTimeout(() => setSuccessMsg(''), 3000);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      // ✅ FIX: failures were previously silent (console.error only), so
+      // clicking "Add Income" appeared to do nothing when the save failed.
+      const msg = err.response?.data?.message || 'Failed to save income record.';
+      toast.error(msg);
+    }
   };
 
   const handleEdit = (record) => {

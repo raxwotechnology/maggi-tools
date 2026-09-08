@@ -238,19 +238,34 @@ export const generateGenericReportPDF = async (title, columns, data, orientation
           return undefined;
         };
 
-        // Priority 1: Direct key match (case-insensitive)
-        const directVal = findValueInRow(col);
-        if (directVal !== undefined) {
-          val = directVal;
-        } else {
-          // Priority 2: Mapped candidate keys
-          const normalizedCol = col.toUpperCase().trim();
-          const candidateKeys = fieldMap[normalizedCol] || [col.toLowerCase().replace(/[^a-z0-9]/gi, ''), col];
-          for (const k of candidateKeys) {
+        // Priority 1: Mapped candidate keys (e.g. TOOL -> displayTool).
+        // Checked first so a known display-friendly field always wins over
+        // a same-named raw DB field (e.g. row.tool holding a raw ObjectId).
+        const normalizedCol = col.toUpperCase().trim();
+        const mappedKeys = fieldMap[normalizedCol];
+        if (mappedKeys) {
+          for (const k of mappedKeys) {
             const candidateVal = findValueInRow(k);
             if (candidateVal !== undefined) {
               val = candidateVal;
               break;
+            }
+          }
+        }
+
+        // Priority 2: Direct/loose key match (only if no mapped field matched)
+        if (val === '—') {
+          const directVal = findValueInRow(col);
+          if (directVal !== undefined) {
+            val = directVal;
+          } else if (!mappedKeys) {
+            const fallbackKeys = [col.toLowerCase().replace(/[^a-z0-9]/gi, ''), col];
+            for (const k of fallbackKeys) {
+              const candidateVal = findValueInRow(k);
+              if (candidateVal !== undefined) {
+                val = candidateVal;
+                break;
+              }
             }
           }
         }

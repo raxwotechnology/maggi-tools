@@ -192,6 +192,57 @@ const BookingBook = ({ setActiveTab }) => {
     });
   }, [bookings, statusFilter, paymentFilter, searchQuery]);
 
+  // Flatten each booking into one row PER TOOL ITEM, so a booking with
+  // multiple tools shows each tool on its own row (with its quantity)
+  // instead of a collapsed "N Tools" summary. Used by both the table
+  // and the Tool Reservations PDF report.
+  const flatRows = useMemo(() => {
+    const rows = [];
+    filteredRecords.forEach((r) => {
+      const items = Array.isArray(r.items) && r.items.length > 0 ? r.items : null;
+      const bookingDays = Number(r.totalDays) || 1;
+
+      if (items) {
+        items.forEach((it, idx) => {
+          const qty = Number(it.quantity) || 1;
+          const rate = Number(it.dailyRate) || 0;
+          const days = Number(it.rentalDays) || bookingDays;
+          rows.push({
+            ...r,
+            _rowKey: `${r._id || r.displayId}-item-${idx}`,
+            itemToolNumber: it.toolNumber || it.toolNo || '—',
+            itemModel: it.model || it.name || '',
+            itemQuantity: qty,
+            itemDailyRate: rate,
+            itemDays: days,
+            itemLineTotal: rate * qty * days
+          });
+        });
+      } else {
+        // Legacy single-tool / accessory-only booking: one row.
+        const toolObj = r.tool;
+        const toolNumber = (typeof toolObj === 'object' && toolObj) ? (toolObj.number || '') : (r.toolNo || '');
+        const model = (typeof toolObj === 'object' && toolObj) ? (toolObj.model || '') : (r.toolModel || '');
+        const qty = Number(r.quantity) || 1;
+        const rate = Number(r.dailyRate) || 0;
+        const days = bookingDays;
+        rows.push({
+          ...r,
+          _rowKey: `${r._id || r.displayId}-item-0`,
+          itemToolNumber: toolNumber || '—',
+          itemModel: model,
+          itemQuantity: qty,
+          itemDailyRate: rate,
+          itemDays: days,
+          // Legacy bookings rarely have a per-tool dailyRate saved separately
+          // from the booking total, so fall back to the booking's total.
+          itemLineTotal: rate > 0 ? (rate * qty * days) : (Number(r.totalAmount) || 0)
+        });
+      }
+    });
+    return rows;
+  }, [filteredRecords]);
+
   // Unified search handler: filters bookings + looks up client profile
   const handleUnifiedSearch = async (value) => {
     setSearchQuery(value);
@@ -463,8 +514,19 @@ const BookingBook = ({ setActiveTab }) => {
   };
 
   const handleExportPDF = () => {
-    generateGenericReportPDF('Tool Reservations Report', ['INV#', 'CUSTOMER', 'TOOL', 'PICKUP', 'RETURN', 'DAYS', 'TOTAL', 'STATUS'], filteredRecords);
-  };
+    // One row per tool item, showing the tool's model name + code, its
+    // quantity, and its OWN price (not the whole booking's total repeated).
+    const reportRows = flatRows.map(r => ({
+      ...r,
+      displayTool: [
+        r.itemModel || 'Tool',
+        r.itemToolNumber && r.itemToolNumber !== '—' ? `(${r.itemToolNumber})` : '',
+        r.itemQuantity > 1 ? `x${r.itemQuantity}` : ''
+      ].filter(Boolean).join(' '),
+      totalAmount: r.itemLineTotal,
+      displayTotal: Number(r.itemLineTotal || 0).toLocaleString()
+    }));
+    generateGenericReportPDF('Tool Reservations Report', ['INV#', 'CUSTOMER', 'TOOL', 'PICKUP', 'RETURN', 'DAYS', 'TOTAL', 'PAID', 'BALANCE', 'STATUS'], reportRows);  };
 
   // Filtered suggestions for autocomplete dropdown
   const clientSuggestions = useMemo(() => {
@@ -625,17 +687,51 @@ const BookingBook = ({ setActiveTab }) => {
       <div className="compliance-card">
         <DataTable
           columns={tableColumns}
-          data={filteredRecords.map(r => ({
+          data={flatRows.map(r => ({
             ...r,
             'INV#': <span style={{ fontWeight: 800, color: 'var(--text-dim)' }}>{r.displayInvoiceNo || '—'}</span>,
             CUSTOMER: <strong style={{ color: 'var(--text-main)' }}>{r.clientName || '—'}</strong>,
-            TOOL: <ToolDropdownCell record={r} onViewDetails={() => handleView(r)} />,
+            TOOL: (
+              <div className="tool-single-pill" title={r.itemModel ? `${r.itemToolNumber} — ${r.itemModel}` : r.itemToolNumber}>
+                <Package size={13} className="tool-pill-icon" />
+                <span className="tool-pill-number">{r.itemToolNumber}</span>
+                {r.itemModel && <span className="tool-pill-model">{r.itemModel}</span>}
+                {r.itemQuantity > 1 && (
+                  <span className="tool-pill-model" style={{ fontWeight: 700 }}>x{r.itemQuantity}</span>
+                )}
+              </div>
+            ),
             PICKUP: r.displayPickup,
             RETURN: r.displayReturn,
             DAYS: <span className="status-badge status-confirmed" style={{ background: 'var(--bg-side)', color: 'var(--text-main)' }}>{r.totalDays || 1} Days</span>,
-            TOTAL: <strong style={{ color: 'var(--text-main)', whiteSpace: 'nowrap' }}>LKR {r.displayTotal}</strong>,
+            TOTAL: <strong style={{ color: 'var(--text-main)', whiteSpace: 'nowrap' }}>LKR {Number(r.itemLineTotal || 0).toLocaleString()}</strong>,
             PAID: <strong style={{ color: 'var(--success)', whiteSpace: 'nowrap' }}>LKR {(r.advancePayment || 0).toLocaleString()}</strong>,
-            BALANCE: <strong style={{ color: (r.balanceAmount || 0) > 0 ? 'var(--danger)' : 'var(--accent)', whiteSpace: 'nowrap' }}>LKR {Math.max(0, r.balanceAmount || 0).toLocaleString()}</strong>,
+            // ✅ FIX: BALANCE column now also shows a "Partial Paid" badge
+            // whenever there's still a balance owing but the customer HAS
+            // already paid something (advancePayment > 0). Previously this
+            // just showed the raw balance number with no payment-state hint.
+            BALANCE: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
+                <strong style={{ color: (r.balanceAmount || 0) > 0 ? 'var(--danger)' : 'var(--accent)', whiteSpace: 'nowrap' }}>
+                  LKR {Math.max(0, r.balanceAmount || 0).toLocaleString()}
+                </strong>
+                {Number(r.balanceAmount || 0) > 0 && Number(r.advancePayment || 0) > 0 && (
+                  <span
+                    style={{
+                      fontSize: '0.65rem',
+                      fontWeight: 800,
+                      color: '#b45309',
+                      background: '#fef3c7',
+                      padding: '1px 8px',
+                      borderRadius: '999px',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Partial Paid
+                  </span>
+                )}
+              </div>
+            ),
             STATUS: (
               Number(r.balanceAmount || 0) <= 0 ? (
                 <span

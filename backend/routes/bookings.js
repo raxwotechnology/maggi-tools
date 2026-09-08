@@ -535,7 +535,7 @@ async function processBookingSideEffects(newBooking, options = {}) {
       const itemsList = Array.isArray(newBooking.items) ? newBooking.items : [];
       const toolsDesc = itemsList.map(it => `${it.toolNumber} (${it.model})`).join(', ');
       const toolsNo = itemsList.map(it => it.toolNumber).join(' / ');
-      const accOnlyLabel = accList.map(a => a.name).filter(Boolean).join(' / ') || 'Accessories';
+      const accOnlyLabel = accList.map(a => a.name).filter(Boolean).join(' / ');
       const tNo = toolsNo || accOnlyLabel;
 
       const invoiceData = {
@@ -656,7 +656,7 @@ async function processBookingSideEffects(newBooking, options = {}) {
       const accListPay = Array.isArray(newBooking.accessories) ? newBooking.accessories : [];
       const tNo = itemsList.map(it => it.toolNumber).join(' / ')
         || accListPay.map(a => a.name).filter(Boolean).join(' / ')
-        || 'Accessories';
+        || 'Various';
 
       const paymentData = {
         date: newBooking.pickupDate || new Date(),
@@ -839,6 +839,11 @@ router.put('/:id', authMiddleware, async (req, res) => {
         }
     }
 
+    // Track whether the caller actually sent an `items` field at all.
+    // A status-only (or any partial) update won't include it, and that
+    // must NOT be treated as "clear the tools".
+    const itemsProvided = Object.prototype.hasOwnProperty.call(req.body, 'items');
+
     if (req.body.items && Array.isArray(req.body.items)) {
       req.body.items = req.body.items
         .map((it) => ({
@@ -854,7 +859,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
       }
     } else if (isValidObjectId(req.body.tool)) {
       req.body.tool = typeof req.body.tool === 'object' ? req.body.tool._id : req.body.tool;
-    } else {
+    } else if (itemsProvided) {
+      // Only clear `tool` when the caller explicitly sent (and cleared) items.
       delete req.body.tool;
     }
 
@@ -870,14 +876,26 @@ router.put('/:id', authMiddleware, async (req, res) => {
       updatedByName: req.user.name
     };
 
-    const hasToolItems = Array.isArray(updatePayload.items) && updatePayload.items.length > 0;
-    const updatedBooking = hasToolItems
-      ? await Booking.findByIdAndUpdate(req.params.id, updatePayload, { new: true })
-      : await Booking.findByIdAndUpdate(
-          req.params.id,
-          { $set: { ...updatePayload, items: [] }, $unset: { tool: 1 } },
-          { new: true }
-        );
+    let updatedBooking;
+    if (!itemsProvided) {
+      // Partial update (e.g. status change only): never touch items/tool.
+      delete updatePayload.items;
+      delete updatePayload.tool;
+      updatedBooking = await Booking.findByIdAndUpdate(
+        req.params.id,
+        { $set: updatePayload },
+        { new: true }
+      );
+    } else {
+      const hasToolItems = Array.isArray(updatePayload.items) && updatePayload.items.length > 0;
+      updatedBooking = hasToolItems
+        ? await Booking.findByIdAndUpdate(req.params.id, updatePayload, { new: true })
+        : await Booking.findByIdAndUpdate(
+            req.params.id,
+            { $set: { ...updatePayload, items: [] }, $unset: { tool: 1 } },
+            { new: true }
+          );
+    }
     
     // Auto-update linked invoice and client
     await processBookingSideEffects(updatedBooking.toObject(), {

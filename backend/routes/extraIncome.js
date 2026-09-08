@@ -14,6 +14,9 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 router.post('/', authMiddleware, async (req, res) => {
+  // ✅ FIX: an empty string accountId (the default when paying by Cash)
+  // can't be cast to a MongoDB ObjectId and was silently failing the save.
+  if (req.body.accountId === '') req.body.accountId = null;
   const record = new ExtraIncome({ ...req.body, updatedBy: req.user.id, updatedByName: req.user.name });
   try {
     const newRecord = await record.save();
@@ -32,6 +35,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
 router.put('/:id', authMiddleware, authorizeRoles('Admin', 'Manager'), async (req, res) => {
   try {
+    if (req.body.accountId === '') req.body.accountId = null;
     const oldRecord = await ExtraIncome.findById(req.params.id);
     const updatedRecord = await ExtraIncome.findByIdAndUpdate(req.params.id, { ...req.body, updatedBy: req.user.id, updatedByName: req.user.name }, { new: true });
     

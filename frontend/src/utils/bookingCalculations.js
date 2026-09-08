@@ -30,7 +30,6 @@ export function calculateBookingCosts(formData, totalDays = 1) {
     
     const unreturned = Math.max(0, totalQty - returnedQty);
     if (unreturned > 0) {
-      // Use per-item rental days if set, otherwise fall back to booking-level totalDays
       let daysForUnreturned = (item.rentalDays && Number(item.rentalDays) > 0) ? Number(item.rentalDays) : days;
       if (formData.actualReturnDate) {
          const actDate = new Date(formData.actualReturnDate);
@@ -59,11 +58,17 @@ export function calculateBookingCosts(formData, totalDays = 1) {
 
   const accessoriesTotal = accessoryCosts.reduce((sum, ac) => sum + ac.cost, 0);
 
+  // Sum of what's actually been marked as paid on each individual tool
+  // item / accessory row — this is the real "amount paid" for the booking,
+  // not a separately-typed top-level value.
+  const itemsPaid = items.reduce((sum, item) => sum + (Number(item.amountPaid) || 0), 0);
+  const accessoriesPaid = accessories.reduce((sum, acc) => sum + (Number(acc.amountPaid) || 0), 0);
+
   const transport = Number(formData.transportCharge) || 0;
   const fuel = Number(formData.fuelCharge) || 0;
   const labour = Number(formData.labourCharge) || 0;
   const discount = Number(formData.discount) || 0;
-  const advance = Number(formData.advancePayment) || 0;
+  const advance = itemsPaid + accessoriesPaid;
 
   const extraCharges = Number(formData.extraCharges) || 0;
   const subtotal = toolsTotal + accessoriesTotal + transport + fuel + labour + extraCharges;
@@ -75,6 +80,8 @@ export function calculateBookingCosts(formData, totalDays = 1) {
     accessoriesTotal,
     itemCosts,
     accessoryCosts,
+    itemsPaid,
+    accessoriesPaid,
     subtotal,
     discount,
     advance: advance,

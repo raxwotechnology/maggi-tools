@@ -22,7 +22,9 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
   const [customerHistory, setCustomerHistory] = useState(null);
   const [fetchingHistory, setFetchingHistory] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const MONEY_FIELDS = ['discount', 'advancePayment', 'transportCharge', 'fuelCharge', 'labourCharge', 'deposit'];
+  // ✅ NOTE: 'advancePayment' removed from MONEY_FIELDS sanitization list —
+  // it is no longer a manual input field, it's auto-computed from item/accessory Paid fields.
+  const MONEY_FIELDS = ['discount', 'transportCharge', 'fuelCharge', 'labourCharge', 'deposit'];
 
   const sanitizeMoneyFields = (data) => {
     const next = { ...data };
@@ -94,7 +96,8 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
           accessoryId: a.accessory || a._id,
           name: a.name,
           quantity: a.quantity || 1,
-          price: a.price || 0
+          price: a.price || 0,
+          amountPaid: a.amountPaid || 0
         }));
       }
 
@@ -118,7 +121,15 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
   }, [initialData]);
 
   const [totalDays, setTotalDays] = useState(1);
-  const [costs, setCosts] = useState({ baseAmount: 0, totalAmount: 0, balanceAmount: 0, toolsTotal: 0, accessoriesTotal: 0 });
+  const [costs, setCosts] = useState({
+    baseAmount: 0,
+    totalAmount: 0,
+    balanceAmount: 0,
+    toolsTotal: 0,
+    accessoriesTotal: 0,
+    itemsPaid: 0,
+    accessoriesPaid: 0
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -303,9 +314,19 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
       totalAmount: calc.totalAmount,
       balanceAmount: calc.balanceAmount,
       toolsTotal: calc.toolsTotal,
-      accessoriesTotal: calc.accessoriesTotal
+      accessoriesTotal: calc.accessoriesTotal,
+      itemsPaid: calc.itemsPaid,
+      accessoriesPaid: calc.accessoriesPaid
     });
-  }, [formData.items, formData.bookingAccessories, totalDays, formData.advancePayment, formData.discount, formData.transportCharge, formData.fuelCharge, formData.labourCharge]);
+    // ✅ Keep formData.advancePayment in sync with the computed paid total so
+    // anything else reading formData.advancePayment directly stays correct too.
+    setFormData(prev => (
+      prev.advancePayment === calc.advance
+        ? prev
+        : { ...prev, advancePayment: calc.advance }
+    ));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.items, formData.bookingAccessories, totalDays, formData.discount, formData.transportCharge, formData.fuelCharge, formData.labourCharge]);
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...formData.items];
@@ -440,6 +461,9 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
         baseAmount: calc.baseAmount,
         totalAmount: calc.totalAmount,
         balanceAmount: calc.balanceAmount,
+        // ✅ FIX: Amount Paid saved to the booking is now the computed sum of
+        // every tool item's + accessory's "Paid" field, not a manually typed value.
+        advancePayment: calc.advance,
         totalDays,
         securityDeposit: Number(formData.deposit) || 0,
         transportCharge: Number(formData.transportCharge) || 0,
@@ -837,71 +861,6 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
               </div>
             ))}
           </div>
-          {/* <div className="form-section">
-            <p className="form-section-title"><Package size={16} /> Selected Tools & Pricing</p>
-            
-            <div className="tool-selector" style={{ marginBottom: '16px' }}>
-                <Autocomplete 
-                  name="toolSearch"
-                  value={toolSearch}
-                  onChange={e => {
-                    const val = e.target.value;
-                    setToolSearch(val);
-                    // Check if the value matches any tool's full description
-                    const found = availableTools.find(t => 
-                      `${t.number} - ${t.model} (${t.status || 'Available'})` === val || t.number === val
-                    );
-                    if (found) {
-                      if (found.status && found.status !== 'Available' && found.status !== 'Active' && !initialData) {
-                        toast.warning(`Warning: This tool is currently ${found.status}. Please check availability dates.`);
-                      }
-                      addTool(found.number);
-                      setToolSearch('');
-                    }
-                  }}
-                  options={availableTools.map(t => `${t.number} - ${t.model} (${t.status || 'Available'})`)}
-                  placeholder="Search by Tool ID, Model or Category..."
-                  className="full-width-autocomplete"
-                />
-            </div>
-
-            {formData.items.map((item, index) => (
-              <div key={index} className="tool-item-row">
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>Tool Info</label>
-                  <div style={{ padding: '10px', background: 'var(--bg-main)', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 600 }}>
-                    {item.toolNumber} - {item.model}
-                  </div>
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>Daily Rate</label>
-                  <input
-                    type="number"
-                    value={item.dailyRate}
-                    onChange={e => handleItemChange(index, 'dailyRate', Number(e.target.value))}
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>Subtotal</label>
-                  <input
-                    type="text"
-                    value={`LKR ${(item.dailyRate * totalDays).toLocaleString()}`}
-                    readOnly
-                    className="input-highlight-blue"
-                  />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '4px' }}>
-                  <button
-                    type="button"
-                    onClick={() => removeItem(index)}
-                    style={{ background: 'var(--danger-soft)', color: 'var(--danger)', border: 'none', borderRadius: '8px', padding: '10px', cursor: 'pointer' }}
-                  >
-                    <TrendingUp style={{ transform: 'rotate(45deg)' }} size={18} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div> */}
           {/* ///////////////////////////////////////////////////////////////select////////////////// */}
           <div className="form-section">
             <p className="form-section-title"><Package size={16} /> Selected Parts & Accessories</p>
@@ -1103,78 +1062,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
               <input type="text" value={formData.conditionOnPickup || ''} onChange={e => setFormData(prev => ({ ...prev, conditionOnPickup: e.target.value }))} placeholder="e.g. Good, Scratch on handle" />
             </div>
           </div>
-          {/* ///////////////////////////////////////////////////////Payment//////////////////////////////////////////// */}
-          {/* <div className="form-section" style={{ background: 'var(--accent-soft)', border: '1px solid var(--accent-glow)' }}>
-            <p className="form-section-title" style={{ color: 'var(--accent)' }}><Hash size={16} /> Pricing & Payment</p>
-            <div className="form-grid-2">
-              <div className="form-group">
-                <label>Advance Payment (LKR)</label>
-                <input type="number" value={formData.advancePayment || 0} onChange={e => setFormData(prev => ({ ...prev, advancePayment: Number(e.target.value) }))} />
-              </div>
-              <div className="form-group">
-                <label>Discount (LKR)</label>
-                <input type="number" value={formData.discount || 0} onChange={e => setFormData(prev => ({ ...prev, discount: Number(e.target.value) }))} />
-              </div>
-            </div>
-            <div className="form-grid-2" style={{ marginTop: '16px' }}>
-              <div className="form-group">
-                <label>Transport Charges (LKR)</label>
-                <input type="number" value={formData.transportCharge || 0} onChange={e => setFormData(prev => ({ ...prev, transportCharge: Number(e.target.value) }))} />
-              </div>
-                <div className="form-group">
-                  <label>Payment Method</label>
-                  <select value={formData.paymentMethod} onChange={e => setFormData(prev => ({ ...prev, paymentMethod: e.target.value }))}>
-                    <option value="Cash">Cash</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="Card">Card</option>
-                    <option value="Cheque">Cheque</option>
-                  </select>
-                </div>
-              </div>
 
-              {formData.paymentMethod === 'Bank Transfer' && (
-                <div className="form-group" style={{ marginTop: '16px' }}>
-                  <label>Target Bank Account *</label>
-                  <select required value={formData.accountId} onChange={e => setFormData({ ...formData, accountId: e.target.value })}>
-                    <option value="">Select Account</option>
-                    {accounts.map(acc => <option key={acc._id} value={acc._id}>{acc.accountName} (LKR {acc.balance.toLocaleString()})</option>)}
-                  </select>
-                </div>
-              )}
-
-            <div className="pricing-breakdown" style={{ marginTop: '20px', padding: '15px', background: 'var(--bg-card)', borderRadius: '10px', border: '1px dashed var(--accent-glow)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span>Tool Rentals ({totalDays} days)</span>
-                <span>LKR {formData.items.reduce((sum, item) => sum + (item.dailyRate * totalDays), 0).toLocaleString()}</span>
-              </div>
-              {formData.bookingAccessories.length > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span>Parts & Accessories</span>
-                  <span>LKR {formData.bookingAccessories.reduce((sum, acc) => sum + (acc.price * acc.quantity), 0).toLocaleString()}</span>
-                </div>
-              )}
-              {formData.transportCharge > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span>Transport Charges</span>
-                  <span>LKR {formData.transportCharge.toLocaleString()}</span>
-                </div>
-              )}
-              {formData.discount > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: 'var(--success)' }}>
-                  <span>Discount</span>
-                  <span>- LKR {formData.discount.toLocaleString()}</span>
-                </div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', fontSize: '1.1rem', marginTop: '10px', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
-                <span>NET TOTAL</span>
-                <span style={{ color: 'var(--accent)' }}>LKR {costs.totalAmount.toLocaleString()}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', marginTop: '5px' }}>
-                <span>BOOKING BALANCE</span>
-                <span style={{ color: costs.balanceAmount > 0 ? 'var(--danger)' : 'var(--success)' }}>LKR {costs.balanceAmount.toLocaleString()}</span>
-              </div>
-            </div>
-          </div> */}
           {/* ── Section: Additional Services & Add-ons (Other Add-ons) ── */}
           <div className="form-section" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px' }}>
             <p className="form-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)', marginBottom: '4px' }}>
@@ -1310,17 +1198,25 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
 
             <div className="form-grid-2">
               <div className="form-group">
-                <label>Amount Paid (LKR)</label>
+                <label>
+                  Amount Paid (LKR){' '}
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                    (auto — sum of each tool/accessory "Paid" field below)
+                  </span>
+                </label>
+                {/* ✅ FIX: no longer a manual input. This is now a read-only
+                    display that always equals the sum of every tool item's
+                    and accessory's individual "Paid" amount. */}
                 <input
-                  type="number"
-                  min="0"
-                  placeholder="Amount"
-                  value={emptyNum(formData.advancePayment)}
-                  onChange={onNumField('advancePayment')}
+                  type="text"
+                  value={`LKR ${((costs.itemsPaid || 0) + (costs.accessoriesPaid || 0)).toLocaleString()}`}
+                  readOnly
+                  className="input-highlight-blue"
+                  style={{ fontWeight: 700 }}
                 />
               </div>
 
-              {/* ✅ NEW: Deposit */}
+              {/* ✅ Deposit */}
               <div className="form-group">
                 <label>Deposit (LKR)</label>
                 <input
@@ -1525,7 +1421,37 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
                   marginTop: "5px",
                 }}
               >
-                <span>BOOKING BALANCE</span>
+                <span>PAID</span>
+                <span style={{ color: 'var(--success)' }}>
+                  LKR {((costs.itemsPaid || 0) + (costs.accessoriesPaid || 0)).toLocaleString()}
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontWeight: "700",
+                  marginTop: "5px",
+                }}
+              >
+                <span>
+                  BOOKING BALANCE
+                  {costs.balanceAmount > 0 && ((costs.itemsPaid || 0) + (costs.accessoriesPaid || 0)) > 0 && (
+                    <span style={{
+                      marginLeft: '8px',
+                      fontSize: '0.65rem',
+                      fontWeight: 800,
+                      color: '#b45309',
+                      background: '#fef3c7',
+                      padding: '2px 8px',
+                      borderRadius: '999px',
+                      verticalAlign: 'middle'
+                    }}>
+                      Partial Paid
+                    </span>
+                  )}
+                </span>
                 <span
                   style={{
                     color: costs.balanceAmount > 0 ? "var(--danger)" : "var(--success)",
