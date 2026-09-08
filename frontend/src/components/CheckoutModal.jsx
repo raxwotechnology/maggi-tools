@@ -39,6 +39,7 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
           maxQty: pendingQty,
           returningQty: pendingQty, // default to max so cost shows immediately
           date: todayStr,
+          dayCount: it.rentalDays || bookingRecord.totalDays || 1, // editable rental day count
           selectedAction: null,
           amountPaid: it.amountPaid || 0,
         };
@@ -54,6 +55,7 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
           maxQty: pendingQty,
           returningQty: pendingQty, // default to max so cost shows immediately
           date: todayStr,
+          dayCount: ac.rentalDays || bookingRecord.totalDays || 1, // editable rental day count
           selectedAction: null,
           amountPaid: ac.amountPaid || 0,
         };
@@ -78,7 +80,8 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
    *  - For "Return W/O Pay" action we still show the cost but mark it separately.
    */
   function getItemTotalCost(row, orig) {
-    const days  = orig?.rentalDays || bookingRecord?.totalDays || 1;
+    // Days is user-editable via the "Days" dropdown; falls back to booking data.
+    const days  = Number(row?.dayCount) || orig?.rentalDays || bookingRecord?.totalDays || 1;
     const qty   = Number(row.maxQty) || 0;           // pending qty only
     const rate  = Number(row.dailyRate) || 0;
     let cost    = rate * qty * days;
@@ -222,7 +225,7 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
     const allRows   = isAcc ? accRows : itemRows;
     const setRows   = isAcc ? setAccRows : setItemRows;
     const orig      = (origList || []).find(o => String(o._id || (isAcc ? o.accessory : o.tool)) === row.id);
-    const days      = orig?.rentalDays || bookingRecord?.totalDays || 1;
+    const days      = Number(row?.dayCount) || orig?.rentalDays || bookingRecord?.totalDays || 1;
     // Use same canonical cost function as Bill Summary → always consistent
     const totalCost = getItemTotalCost(row, orig);
     // Due = total cost for this item minus what's been paid in this session
@@ -315,6 +318,21 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
               value={row.date}
               onChange={e => updateRow({ date: e.target.value })}
             />
+          </div>
+          <div className="rp-control-field">
+            <label className="rp-control-label">Days</label>
+            <select
+              className="rp-control-input"
+              value={row.dayCount}
+              onChange={e => updateRow({ dayCount: Number(e.target.value) })}
+            >
+              {Array.from(
+                { length: Math.max(30, Number(row.dayCount) || 1) },
+                (_, i) => i + 1
+              ).map(d => (
+                <option key={d} value={d}>{d} day{d !== 1 ? 's' : ''}</option>
+              ))}
+            </select>
           </div>
           <div className="rp-control-field">
             <label className="rp-control-label">Qty (max {row.maxQty})</label>

@@ -162,7 +162,9 @@ export const generateGenericReportPDF = async (title, columns, data, orientation
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(110);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth - 15, titleY, { align: 'right' });
+    const generatedDate = new Date();
+    const generatedDateText = `${generatedDate.getFullYear()}/${String(generatedDate.getMonth() + 1).padStart(2, '0')}/${String(generatedDate.getDate()).padStart(2, '0')}`;
+    doc.text(`Generated on: ${generatedDateText}`, pageWidth - 15, titleY, { align: 'right' });
 
     // 5. Build Table Rows with Comprehensive Mapping
     const bodyRows = (data || []).map(row => {
@@ -273,9 +275,19 @@ export const generateGenericReportPDF = async (title, columns, data, orientation
         val = extractTextFromNode(val);
         if (!val && val !== 0) val = '—';
 
-        // Auto date formatting if raw ISO date string
-        if (col.includes('DATE') && val !== '—' && !isNaN(Date.parse(val)) && !String(val).includes('/')) {
-          try { val = new Date(val).toLocaleDateString(); } catch (_e) { /* ignore parse error */ }
+        // Auto date formatting as YYYY/MM/DD
+        if (col.includes('DATE') && val !== '—' && !String(val).includes('/')) {
+          try {
+            const d = new Date(val);
+            if (!isNaN(d.getTime())) {
+              const year = d.getFullYear();
+              const month = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              val = `${year}/${month}/${day}`;
+            }
+          } catch (_e) {
+            // ignore invalid date
+          }
         }
 
         // Auto currency formatting if purely numeric

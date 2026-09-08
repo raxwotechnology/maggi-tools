@@ -242,7 +242,16 @@ const InvoiceBook = ({ initialTab }) => {
         ...inv,
         rawData: inv,
         invoiceNo_disp: <strong style={{ color: 'var(--text-main)' }}>{inv.invoiceNo}</strong>,
-        date_disp: new Date(inv.date).toLocaleDateString(),
+        date_disp: inv.date
+          ? (() => {
+              const d = new Date(inv.date);
+              if (isNaN(d.getTime())) return '—';
+              const year = d.getFullYear();
+              const month = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              return `${year}/${month}/${day}`;
+            })()
+          : '—',
         TOTAL: <strong style={{ color: 'var(--accent)' }}>{fmtMoney(total)}</strong>,
         BALANCE: <strong style={{ color: balance > 0 ? 'var(--danger)' : 'var(--success)' }}>{fmtMoney(balance)}</strong>,
         status_disp: (
@@ -295,7 +304,16 @@ const InvoiceBook = ({ initialTab }) => {
       return {
         ...pay,
         rawData: pay,
-        date_disp: pay.date ? new Date(pay.date).toLocaleDateString() : '—',
+        date_disp: pay.date
+          ? (() => {
+              const d = new Date(pay.date);
+              if (isNaN(d.getTime())) return '—';
+              const year = d.getFullYear();
+              const month = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              return `${year}/${month}/${day}`;
+            })()
+          : '—',
         CLIENT: pay.client || '—',
         'INV#': <strong style={{ color: 'var(--text-dim)' }}>{pay.invoiceNo || '—'}</strong>,
         TOOL: pay.tool || pay.vehicle || '—',
@@ -345,7 +363,7 @@ const InvoiceBook = ({ initialTab }) => {
       generateGenericReportPDF(
         'Payment History Report',
         ['DATE', 'CLIENT', 'TOOL', 'HIRE AMT', 'PAID', 'BALANCE', 'STATUS'],
-        payments
+        formattedPayments
       );
     } else {
       generateGenericReportPDF(
