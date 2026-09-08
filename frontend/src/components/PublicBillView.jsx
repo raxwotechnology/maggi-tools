@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { formatDateYMD } from '../utils/dateFormat';
 
 const getApiBase = () => {
   const isLocal =
@@ -14,7 +15,7 @@ const getApiBase = () => {
 };
 
 const fmt = (v) => `LKR ${Number(v || 0).toLocaleString()}`;
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const fmtDate = (d) => formatDateYMD(d);
 
 function calcDays(pickupDate, returnDateStr) {
   if (!pickupDate || !returnDateStr) return 0;

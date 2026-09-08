@@ -4,6 +4,7 @@ import logoUrl from '../logo.png';
 import { amountToWords } from './numberToWords';
 import api from '../services/api';
 import { toast } from './feedback';
+import { formatDateYMD } from './dateFormat';
 
 const COMPANY_DETAILS = {
   name: 'MAGGI TOOLS',
@@ -149,23 +150,8 @@ const drawContactHeader = (doc, settings, pageWidth) => {
 };
 
 const safeDate = (d) => {
-    try {
-        if (!d) return '--/--/----';
-
-        const date = new Date(d);
-
-        if (isNaN(date.getTime())) {
-            return '--/--/----';
-        }
-
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-
-        return `${year}/${month}/${day}`;
-    } catch {
-        return '--/--/----';
-    }
+    // Year/Month/Day format (YYYY/MM/DD) for all invoice & quotation PDFs
+    return formatDateYMD(d, '----/--/--');
 };
 
 const getDynamicSettings = async () => {

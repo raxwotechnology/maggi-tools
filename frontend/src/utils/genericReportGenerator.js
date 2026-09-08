@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable';
 import logoUrl from '../logo.png';
 import api from '../services/api';
 import { toast } from './feedback';
+import { formatDateYMD } from './dateFormat';
 
 const THEME = {
   primary: [15, 78, 148],   // Corporate Blue
@@ -162,9 +163,7 @@ export const generateGenericReportPDF = async (title, columns, data, orientation
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(110);
-    const generatedDate = new Date();
-    const generatedDateText = `${generatedDate.getFullYear()}/${String(generatedDate.getMonth() + 1).padStart(2, '0')}/${String(generatedDate.getDate()).padStart(2, '0')}`;
-    doc.text(`Generated on: ${generatedDateText}`, pageWidth - 15, titleY, { align: 'right' });
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth - 15, titleY, { align: 'right' });
 
     // 5. Build Table Rows with Comprehensive Mapping
     const bodyRows = (data || []).map(row => {
@@ -275,19 +274,9 @@ export const generateGenericReportPDF = async (title, columns, data, orientation
         val = extractTextFromNode(val);
         if (!val && val !== 0) val = '—';
 
-        // Auto date formatting as YYYY/MM/DD
-        if (col.includes('DATE') && val !== '—' && !String(val).includes('/')) {
-          try {
-            const d = new Date(val);
-            if (!isNaN(d.getTime())) {
-              const year = d.getFullYear();
-              const month = String(d.getMonth() + 1).padStart(2, '0');
-              const day = String(d.getDate()).padStart(2, '0');
-              val = `${year}/${month}/${day}`;
-            }
-          } catch (_e) {
-            // ignore invalid date
-          }
+        // Auto date formatting if raw ISO date string — Year/Month/Day (YYYY/MM/DD)
+        if (col.includes('DATE') && val !== '—' && !isNaN(Date.parse(val)) && !String(val).includes('/')) {
+          try { val = formatDateYMD(val, val); } catch (_e) { /* ignore parse error */ }
         }
 
         // Auto currency formatting if purely numeric

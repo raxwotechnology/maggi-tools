@@ -17,6 +17,7 @@ import '../styles/forms.css';
 import '../styles/books.css';
 import { calculateBookingCosts } from '../utils/bookingCalculations';
 import { confirmDialog, toast } from '../utils/feedback';
+import { formatDateYMD } from '../utils/dateFormat';
 
 const BookingBook = ({ setActiveTab }) => {
   const userRole = localStorage.getItem('raxwo_user_role');
@@ -143,8 +144,8 @@ const BookingBook = ({ setActiveTab }) => {
           displayInvoiceNo: item.invoiceNo || '',
           clientName: item.clientName,
           displayTool: toolsLabel,
-          displayPickup: new Date(item.pickupDate).toLocaleDateString(),
-          displayReturn: new Date(item.returnDate).toLocaleDateString(),
+          displayPickup: formatDateYMD(item.pickupDate),
+          displayReturn: formatDateYMD(item.returnDate),
           totalDays: item.totalDays || 1,
           displayTotal: (item.totalAmount || 0).toLocaleString(),
           displayStatus: item.status || 'Confirmed'
@@ -440,7 +441,7 @@ const BookingBook = ({ setActiveTab }) => {
     if (!record.clientPhone) return toast.warning('No phone number found.');
 
     const phone = record.clientPhone.replace(/[^0-9]/g, '');
-    const msg = encodeURIComponent(`Reminder from DVD Tool Rentals: Dear ${record.clientName}, your rental of ${record.tool ? record.tool.number : 'Tool'} is due on ${new Date(record.returnDate).toLocaleDateString()}. Please ensure timely return to avoid extra charges.`);
+    const msg = encodeURIComponent(`Reminder from DVD Tool Rentals: Dear ${record.clientName}, your rental of ${record.tool ? record.tool.number : 'Tool'} is due on ${formatDateYMD(record.returnDate)}. Please ensure timely return to avoid extra charges.`);
     window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
   };
 
