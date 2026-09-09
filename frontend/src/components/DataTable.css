@@ -182,8 +182,8 @@
   .data-table td {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 10px 14px;
+    gap: 5px;
+    padding: 12px 14px;
     border-bottom: 1px solid var(--border-soft);
     border-right: 1px solid var(--border-soft);
     font-size: 0.875rem;
@@ -191,6 +191,8 @@
     color: var(--text-main);
     word-break: break-word;
     align-items: flex-start;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .data-table td:nth-child(even) {

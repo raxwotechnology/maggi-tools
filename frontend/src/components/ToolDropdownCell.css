@@ -367,3 +367,36 @@
   background: rgba(31, 41, 55, 0.5);
   border-color: rgba(255, 255, 255, 0.1);
 }
+
+/* ── Mobile: pill must shrink to its card cell, not overflow it ── */
+@media (max-width: 768px) {
+  .tool-single-pill {
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+    flex-wrap: wrap;
+    row-gap: 3px;
+    padding: 5px 8px;
+  }
+
+  .tool-single-pill .tool-pill-model {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    word-break: break-word;
+    max-width: 100%;
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .tool-single-pill {
+    font-size: 0.75rem;
+    gap: 5px;
+  }
+
+  .tool-single-pill .tool-pill-model {
+    font-size: 0.7rem;
+  }
+}
