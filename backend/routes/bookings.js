@@ -944,7 +944,7 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
-    const { returnDate, returnedItems, returnedAccessories, paidNotReturnedItems, paidNotReturnedAccessories, returnedWithoutPayItems, returnedWithoutPayAccessories, paymentAmount, paymentMethod, accountId } = req.body;
+    const { returnDate, returnedItems, returnedAccessories, paidNotReturnedItems, paidNotReturnedAccessories, returnedWithoutPayItems, returnedWithoutPayAccessories, soldItems: soldItemsPayload, paymentAmount, paymentMethod, accountId } = req.body;
     const returnDateObj = new Date(returnDate || Date.now());
 
     let allFullyReturned = true;
@@ -1147,6 +1147,21 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
 
         if ((acc.returnedQuantity || 0) < (acc.quantity || 1)) {
           allFullyReturned = false;
+        }
+      }
+    }
+
+    // Process payments on sold/purchased items (outright sales — registered tools sold
+    // to the customer, or unregistered/other items added manually). No return workflow,
+    // just tracking how much of the sale price has been paid.
+    if (booking.soldItems && booking.soldItems.length > 0 && Array.isArray(soldItemsPayload)) {
+      for (const sold of booking.soldItems) {
+        const soldData = soldItemsPayload.find(s => String(s.id) === String(sold._id));
+        if (soldData && soldData.amountPaid !== undefined) {
+          sold.amountPaid = Number(soldData.amountPaid) || 0;
+          const price = Number(sold.price) || 0;
+          const qty = Number(sold.quantity) || 1;
+          sold.amountDue = Math.max(0, (price * qty) - sold.amountPaid);
         }
       }
     }

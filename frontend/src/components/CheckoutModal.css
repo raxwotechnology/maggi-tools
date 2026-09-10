@@ -298,6 +298,30 @@
   border-color: rgba(16,185,129,0.2);
 }
 
+/* Days field — read-only "auto" display vs the manual number input */
+.rp-control-input--readonly {
+  display: flex;
+  align-items: center;
+  background: var(--bg-hover, var(--bg-main));
+  color: var(--text-main);
+  cursor: default;
+}
+
+.rp-daymode-toggle {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  padding: 0 0 2px 0;
+  white-space: nowrap;
+}
+.rp-daymode-toggle:hover {
+  text-decoration: underline;
+}
+
 /* ── Status chip (for completed items) ── */
 .rp-status-chip {
   display: inline-flex;

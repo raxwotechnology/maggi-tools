@@ -19,6 +19,7 @@ function calcDays(pickupDate, returnDateStr) {
 export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts, onComplete }) {
   const [itemRows, setItemRows] = useState([]);
   const [accRows, setAccRows] = useState([]);
+  const [soldRows, setSoldRows] = useState([]);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [accountId, setAccountId] = useState('');
@@ -31,6 +32,7 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
 
       const items = (bookingRecord.items || []).map(it => {
         const pendingQty = (it.quantity || 1) - (it.returnedQuantity || 0);
+        const autoDays = calcDays(bookingRecord.pickupDate, todayStr) || it.rentalDays || bookingRecord.totalDays || 1;
         return {
           id: String(it._id || it.tool || ''),
           name: `${it.toolNumber || ''} - ${it.model || ''}`,
@@ -39,7 +41,8 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
           maxQty: pendingQty,
           returningQty: pendingQty, // default to max so cost shows immediately
           date: todayStr,
-          dayCount: it.rentalDays || bookingRecord.totalDays || 1, // editable rental day count
+          dayCount: autoDays,        // editable rental day count
+          dateMode: 'auto',          // 'auto' = recalculated whenever Return Date changes; 'manual' = typed directly
           selectedAction: null,
           amountPaid: it.amountPaid || 0,
         };
@@ -47,6 +50,7 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
 
       const accs = (bookingRecord.accessories || []).map(ac => {
         const pendingQty = (ac.quantity || 1) - (ac.returnedQuantity || 0);
+        const autoDays = calcDays(bookingRecord.pickupDate, todayStr) || ac.rentalDays || bookingRecord.totalDays || 1;
         return {
           id: String(ac._id || ac.accessory || ''),
           name: ac.name || '',
@@ -55,14 +59,26 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
           maxQty: pendingQty,
           returningQty: pendingQty, // default to max so cost shows immediately
           date: todayStr,
-          dayCount: ac.rentalDays || bookingRecord.totalDays || 1, // editable rental day count
+          dayCount: autoDays,        // editable rental day count
+          dateMode: 'auto',          // 'auto' = recalculated whenever Return Date changes; 'manual' = typed directly
           selectedAction: null,
           amountPaid: ac.amountPaid || 0,
         };
       });
 
+      // Sold / purchased items (registered tools sold outright, or unregistered/other items
+      // added manually) — customer already owns these, we just need to track payment.
+      const solds = (bookingRecord.soldItems || []).map(s => ({
+        id: String(s._id || s.tool || ''),
+        name: s.toolNumber ? `${s.toolNumber} - ${s.model || ''}` : (s.model || 'Item'),
+        price: Number(s.price) || 0,
+        quantity: Number(s.quantity) || 1,
+        amountPaid: s.amountPaid || 0,
+      }));
+
       setItemRows(items);
       setAccRows(accs);
+      setSoldRows(solds);
       // Pre-fill with the booking's stored balance; will be overridden by live calc
       setPaymentAmount(Number(bookingRecord.balanceAmount || bookingRecord.totalAmount || 0));
       setPaymentMethod('Cash');
@@ -117,6 +133,9 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
     return s + getItemTotalCost(r, orig);
   }, 0);
 
+  // Sold/purchased items subtotal — one-time purchase, price × qty, no per-day multiplier
+  const soldsSubtotal = soldRows.reduce((s, r) => s + (Number(r.price) || 0) * (Number(r.quantity) || 1), 0);
+
   const transport    = Number(bookingRecord?.transportCharge) || 0;
   const fuel         = Number(bookingRecord?.fuelCharge)      || 0;
   const labour       = Number(bookingRecord?.labourCharge)    || 0;
@@ -124,14 +143,15 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
   const extraCharges = Number(bookingRecord?.extraCharges)    || 0;
 
   // Grand total for this return session
-  const calculatedTotal = Math.max(0, itemsSubtotal + accsSubtotal + transport + fuel + labour + extraCharges - discount);
+  const calculatedTotal = Math.max(0, itemsSubtotal + accsSubtotal + soldsSubtotal + transport + fuel + labour + extraCharges - discount);
 
   // Already paid = booking-level advance + ALL per-item amountPaid typed in the form
-  // This updates LIVE as user types in Paid fields because itemRows/accRows are state
+  // This updates LIVE as user types in Paid fields because itemRows/accRows/soldRows are state
   const itemsPaidInForm = itemRows.reduce((s, r) => s + (Number(r.amountPaid) || 0), 0);
   const accsPaidInForm  = accRows.reduce((s, r) => s + (Number(r.amountPaid) || 0), 0);
+  const soldsPaidInForm = soldRows.reduce((s, r) => s + (Number(r.amountPaid) || 0), 0);
   const advancePaid     = Number(bookingRecord?.advancePayment) || 0;
-  const alreadyPaid     = advancePaid + itemsPaidInForm + accsPaidInForm;
+  const alreadyPaid     = advancePaid + itemsPaidInForm + accsPaidInForm + soldsPaidInForm;
 
   const remainingBalance = Math.max(0, calculatedTotal - alreadyPaid);
 
@@ -181,6 +201,10 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
           date: ac.date,
           amountPaid: Number(ac.amountPaid) || 0,
         })),
+        soldItems: soldRows.map(s => ({
+          id: s.id,
+          amountPaid: Number(s.amountPaid) || 0,
+        })),
         paymentAmount: finalPayment,
         paymentMethod,
         accountId,
@@ -215,6 +239,12 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
     }
     
     setter(copy);
+  };
+
+  const updateSoldRow = (idx, patch) => {
+    const copy = [...soldRows];
+    copy[idx] = { ...copy[idx], ...patch };
+    setSoldRows(copy);
   };
 
   if (!isOpen || !bookingRecord) return null;
@@ -316,23 +346,53 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
               type="date"
               className="rp-control-input"
               value={row.date}
-              onChange={e => updateRow({ date: e.target.value })}
+              onChange={e => {
+                const newDate = e.target.value;
+                if (row.dateMode === 'manual') {
+                  // Manual mode: date changes don't touch the typed day count
+                  updateRow({ date: newDate });
+                } else {
+                  // Auto mode: day count follows the date, live, until Confirm is clicked
+                  const autoDays = calcDays(pickupDate, newDate) || 1;
+                  updateRow({ date: newDate, dayCount: autoDays });
+                }
+              }}
             />
           </div>
           <div className="rp-control-field">
-            <label className="rp-control-label">Days</label>
-            <select
-              className="rp-control-input"
-              value={row.dayCount}
-              onChange={e => updateRow({ dayCount: Number(e.target.value) })}
-            >
-              {Array.from(
-                { length: Math.max(30, Number(row.dayCount) || 1) },
-                (_, i) => i + 1
-              ).map(d => (
-                <option key={d} value={d}>{d} day{d !== 1 ? 's' : ''}</option>
-              ))}
-            </select>
+            <label className="rp-control-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>Days</span>
+              <button
+                type="button"
+                className="rp-daymode-toggle"
+                onClick={() => {
+                  if (row.dateMode === 'manual') {
+                    // Switching back to Auto: snap to the calculated value right away
+                    updateRow({ dateMode: 'auto', dayCount: calcDays(pickupDate, row.date) || 1 });
+                  } else {
+                    updateRow({ dateMode: 'manual' });
+                  }
+                }}
+                disabled={loading}
+                title={row.dateMode === 'manual' ? 'Switch back to auto (calculated from Return Date)' : 'Type the day count manually'}
+              >
+                {row.dateMode === 'manual' ? '✏️ Manual' : '⚡ Auto'}
+              </button>
+            </label>
+            {row.dateMode === 'manual' ? (
+              <input
+                type="number"
+                className="rp-control-input"
+                min="0"
+                value={row.dayCount}
+                onChange={e => updateRow({ dayCount: Math.max(0, Number(e.target.value) || 0) })}
+                disabled={loading}
+              />
+            ) : (
+              <div className="rp-control-input rp-control-input--readonly">
+                {days} day{days !== 1 ? 's' : ''}
+              </div>
+            )}
           </div>
           <div className="rp-control-field">
             <label className="rp-control-label">Qty (max {row.maxQty})</label>
@@ -411,7 +471,7 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
           <span className="rp-section-label">Items Being Returned</span>
         </div>
 
-        {itemRows.length === 0 && accRows.length === 0 && (
+        {itemRows.length === 0 && accRows.length === 0 && soldRows.length === 0 && (
           <div className="rp-empty-state">
             <span>✅</span>
             <p>All items have already been returned.</p>
@@ -429,6 +489,59 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
         )}
         {accRows.map((ac, idx) => renderItemCard(ac, idx, true))}
 
+        {/* Sold / purchased item cards (registered tools sold outright, and unregistered/other items) */}
+        {soldRows.length > 0 && (
+          <div className="rp-section-head" style={{ marginTop: '4px' }}>
+            <span className="rp-section-label">Items Purchased</span>
+          </div>
+        )}
+        {soldRows.map((sold, idx) => {
+          const lineTotal = (Number(sold.price) || 0) * (Number(sold.quantity) || 1);
+          const amtDue    = Math.max(0, lineTotal - (Number(sold.amountPaid) || 0));
+          return (
+            <div key={sold.id || idx} className="rp-item-card">
+              <div className="rp-item-header">
+                <div className="rp-item-meta">
+                  <span className="rp-item-badge">SOLD</span>
+                  <div>
+                    <div className="rp-item-name">{sold.name}</div>
+                    <div className="rp-item-rate">
+                      LKR {sold.price.toLocaleString()}/unit
+                      &nbsp;·&nbsp;
+                      Qty {sold.quantity}
+                    </div>
+                  </div>
+                </div>
+                <div className="rp-item-cost-badge">
+                  <span className="rp-item-cost-label">TOTAL</span>
+                  <span className="rp-item-cost-value">LKR {lineTotal.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="rp-controls-grid">
+                <div className="rp-control-field">
+                  <label className="rp-control-label">Paid (LKR)</label>
+                  <input
+                    type="number"
+                    className="rp-control-input rp-control-input--paid"
+                    min="0"
+                    value={sold.amountPaid === 0 ? '' : sold.amountPaid}
+                    placeholder="0"
+                    onChange={e => updateSoldRow(idx, { amountPaid: e.target.value === '' ? '' : Number(e.target.value) })}
+                    disabled={loading}
+                  />
+                </div>
+                <div className="rp-control-field">
+                  <label className="rp-control-label">Due</label>
+                  <div className={`rp-due-display${amtDue > 0 ? ' rp-due-display--unpaid' : ' rp-due-display--clear'}`}>
+                    LKR {amtDue.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
         {/* ── Bill Summary ── */}
         <div className="rp-summary-card">
           <div className="rp-summary-title">📋 Bill Summary</div>
@@ -444,6 +557,12 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
             <div className="rp-summary-row">
               <span>📦 Accessories</span>
               <span>LKR {accsSubtotal.toLocaleString()}</span>
+            </div>
+          )}
+          {soldsSubtotal > 0 && (
+            <div className="rp-summary-row">
+              <span>🛒 Items Purchased</span>
+              <span>LKR {soldsSubtotal.toLocaleString()}</span>
             </div>
           )}
           {transport > 0 && (
@@ -484,10 +603,10 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
               <span style={{ color: 'var(--success)', fontWeight: 600 }}>LKR {advancePaid.toLocaleString()}</span>
             </div>
           )}
-          {(itemsPaidInForm + accsPaidInForm) > 0 && (
+          {(itemsPaidInForm + accsPaidInForm + soldsPaidInForm) > 0 && (
             <div className="rp-summary-row">
               <span style={{ color: 'var(--text-dim)' }}>Collected Now</span>
-              <span style={{ color: 'var(--success)', fontWeight: 600 }}>LKR {(itemsPaidInForm + accsPaidInForm).toLocaleString()}</span>
+              <span style={{ color: 'var(--success)', fontWeight: 600 }}>LKR {(itemsPaidInForm + accsPaidInForm + soldsPaidInForm).toLocaleString()}</span>
             </div>
           )}
           <div className="rp-summary-row">
