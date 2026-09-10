@@ -194,6 +194,26 @@ const QuotationDocumentView = ({ data }) => {
                     </td>
                   </tr>
                 ))}
+
+                {Array.isArray(data.soldItems) && data.soldItems.map((sold, idx) => (
+                  <tr key={`sold-${idx}`}>
+                    <td style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
+                      {(data.items?.length || 0) + (data.accessories?.length || 0) + idx + 1}
+                    </td>
+                    <td className="item-desc-cell">
+                      <div className="main-item-name">Sold: {sold.model || 'Tool'}</div>
+                      {sold.toolNumber && <span className="item-sub-id">Tool #{sold.toolNumber}</span>}
+                    </td>
+                    <td className="num-col">LKR {Number(sold.price || 0).toLocaleString()}</td>
+                    <td className="num-col bold-val">{sold.quantity || 1}</td>
+                    <td className="num-col">
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--success, #16a34a)' }}>Sold</span>
+                    </td>
+                    <td className="num-col bold-val">
+                      LKR {(Number(sold.price || 0) * Number(sold.quantity || 1)).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -226,6 +246,28 @@ const QuotationDocumentView = ({ data }) => {
                 </div>
               ))
             ) : null}
+
+            {Array.isArray(data.soldItems) && data.soldItems.map((sold, idx) => (
+              <div key={`sold-${idx}`} className="mobile-item-card">
+                <div className="card-top-row">
+                  <span className="item-card-title">Sold: {sold.model || 'Tool'}</span>
+                  <span className="item-card-total">
+                    LKR {(Number(sold.price || 0) * Number(sold.quantity || 1)).toLocaleString()}
+                  </span>
+                </div>
+                {sold.toolNumber && <div className="item-card-sub">Tool #{sold.toolNumber}</div>}
+                <div className="card-details-grid">
+                  <div className="card-det-cell">
+                    <label>Qty</label>
+                    <span>{sold.quantity || 1}</span>
+                  </div>
+                  <div className="card-det-cell">
+                    <label>Price</label>
+                    <span>LKR {Number(sold.price || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -543,6 +585,14 @@ const RecordDetails = ({ data, type }) => {
         label: `${a.number ? `[${a.number}] ` : ''}${a.name} (x${a.quantity})`,
         key: `acc_${i}`,
         value: `LKR ${(a.price * a.quantity).toLocaleString()}`
+      }))
+    }] : []),
+    ...(data?.soldItems?.length > 0 ? [{
+      title: 'Sold Items',
+      fields: data.soldItems.map((s, i) => ({
+        label: `${s.toolNumber ? `[${s.toolNumber}] ` : ''}${s.model || 'Tool'} (x${s.quantity})`,
+        key: `sold_${i}`,
+        value: `LKR ${(s.price * s.quantity).toLocaleString()}`
       }))
     }] : [])
   ];
@@ -887,6 +937,43 @@ const RecordDetails = ({ data, type }) => {
           )
         };
       })
+    }] : []),
+    ...(data?.soldItems?.length > 0 ? [{
+      title: 'Sold Items',
+      fields: data.soldItems.map((s, i) => ({
+        label: `Sold ${i + 1}`,
+        fullWidth: true,
+        value: (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: 'var(--bg-main)', padding: '18px', borderRadius: '14px', border: '1px solid var(--border)', boxShadow: '0 6px 16px rgba(0,0,0,0.03)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px dashed var(--border)', paddingBottom: '14px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ fontWeight: 900, color: 'var(--accent)', fontSize: '1.1rem', letterSpacing: '-0.02em' }}>{s.toolNumber}</div>
+                <div style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.85rem' }}>{s.model}</div>
+              </div>
+              <span style={{ background: 'var(--success-soft, #f0fdf4)', color: 'var(--success)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800 }}>SOLD</span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--bg-card)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-soft)' }}>
+                <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-dim)' }}>Sale Price</span>
+                <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.95rem' }}>LKR {Number(s.price || 0).toLocaleString()}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--bg-card)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-soft)' }}>
+                <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-dim)' }}>Quantity</span>
+                <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.95rem' }}>{s.quantity || 1}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--success-soft, #f0fdf4)', padding: '12px', borderRadius: '10px', border: '1px solid var(--success)' }}>
+                <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--success)' }}>Paid</span>
+                <span style={{ fontWeight: 900, color: 'var(--success)', fontSize: '0.95rem' }}>LKR {(s.amountPaid || 0).toLocaleString()}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: (s.amountDue || 0) > 0 ? 'var(--danger-soft)' : 'var(--bg-card)', padding: '12px', borderRadius: '10px', border: `1px solid ${(s.amountDue || 0) > 0 ? 'var(--danger)' : 'var(--border-soft)'}` }}>
+                <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, color: (s.amountDue || 0) > 0 ? 'var(--danger)' : 'var(--text-dim)' }}>Due</span>
+                <span style={{ fontWeight: 900, color: (s.amountDue || 0) > 0 ? 'var(--danger)' : 'var(--text-main)', fontSize: '0.95rem' }}>LKR {(s.amountDue || 0).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+        )
+      }))
     }] : []),
     {
       title: 'Schedule Information', fields: [

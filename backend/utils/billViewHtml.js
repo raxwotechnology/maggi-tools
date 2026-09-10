@@ -37,6 +37,7 @@ function renderBillViewHtml(booking, invoice, settings) {
   const totalBookingDays = booking.totalDays || calcDays(pickupDate, booking.returnDate) || 1;
   const items = booking.items || [];
   const accs = booking.accessories || [];
+  const sold = booking.soldItems || [];
 
   // Build item rows
   const itemRows = items.map(it => {
@@ -67,7 +68,18 @@ function renderBillViewHtml(booking, invoice, settings) {
     };
   });
 
-  const allRows = [...itemRows, ...accRows];
+  // Sold tools are a one-time purchase — no per-day multiplier, days shown as "—".
+  const soldRows = sold.map(s => {
+    const qty = Number(s.quantity) || 1;
+    const price = Number(s.price) || 0;
+    return {
+      name: `${s.toolNumber || ''} — ${s.model || 'Tool'}`,
+      type: 'Sold', qty, rate: price, days: null,
+      amount: price * qty
+    };
+  });
+
+  const allRows = [...itemRows, ...accRows, ...soldRows];
 
   const transport = Number(booking.transportCharge) || 0;
   const otherCharges = Number(booking.extraCharges) || 0;
@@ -87,7 +99,9 @@ function renderBillViewHtml(booking, invoice, settings) {
       </td>
       <td style="padding:12px 10px;text-align:center;border-bottom:1px solid #f1f5f9;">${row.qty}</td>
       <td style="padding:12px 10px;text-align:center;border-bottom:1px solid #f1f5f9;">
-        <span style="background:#ede9fe;color:#7c3aed;border-radius:6px;padding:2px 8px;font-size:0.78rem;font-weight:700;">${row.days}d</span>
+        ${row.days != null
+          ? `<span style="background:#ede9fe;color:#7c3aed;border-radius:6px;padding:2px 8px;font-size:0.78rem;font-weight:700;">${row.days}d</span>`
+          : `<span style="background:#dcfce7;color:#15803d;border-radius:6px;padding:2px 8px;font-size:0.78rem;font-weight:700;">Sold</span>`}
       </td>
       <td style="padding:12px 10px;text-align:right;border-bottom:1px solid #f1f5f9;color:#64748b;">${fmtMoney(row.rate)}</td>
       <td style="padding:12px 10px;text-align:right;border-bottom:1px solid #f1f5f9;font-weight:700;color:#1e293b;">${fmtMoney(row.amount)}</td>

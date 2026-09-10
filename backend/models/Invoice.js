@@ -58,6 +58,13 @@ const InvoiceSchema = new mongoose.Schema({
     quantity: Number,
     price: Number
   }],
+  // Tools sold outright (one-time purchase, not rented) as part of this booking
+  soldItems: [{
+    toolNumber: String,
+    model: String,
+    price: Number,
+    quantity: Number
+  }],
   accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' },
   paymentMethod: { type: String, default: 'Cash' },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

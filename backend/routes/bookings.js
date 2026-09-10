@@ -96,6 +96,7 @@ function calcBookingTotals(body) {
 
   const items = Array.isArray(body.items) ? body.items : [];
   const accessories = Array.isArray(body.accessories) ? body.accessories : [];
+  const soldItems = Array.isArray(body.soldItems) ? body.soldItems : [];
 
   const getCost = (item, rate) => {
     let cost = 0;
@@ -146,12 +147,18 @@ function calcBookingTotals(body) {
     0
   );
 
+  // Sold tools are a one-time purchase — price × quantity, no per-day multiplier.
+  const soldTotal = soldItems.reduce(
+    (sum, s) => sum + ((Number(s.price) || 0) * (Number(s.quantity) || 1)),
+    0
+  );
+
   const transport = Number(body.transportCharge) || 0;
   const fuel = Number(body.fuelCharge) || 0;
   const labour = Number(body.labourCharge) || 0;
   const discount = Number(body.discount) || 0;
   const advance = Number(body.advancePayment) || 0;
-  const subtotal = toolsTotal + accTotal + transport + fuel + labour;
+  const subtotal = toolsTotal + accTotal + soldTotal + transport + fuel + labour;
   
   // Apply late return extra charges if not handled via returnDates
   let extra = 0;
@@ -479,6 +486,20 @@ router.post('/', authMiddleware, async (req, res) => {
       }
     }
 
+    // 1b. Update Tool Stock for items sold outright (permanent removal from inventory)
+    if (newBooking.soldItems && newBooking.soldItems.length > 0) {
+      for (const sold of newBooking.soldItems) {
+        try {
+          if (!isValidObjectId(sold.tool)) continue;
+          const qty = Number(sold.quantity) || 1;
+          const updatedTool = await Tool.findByIdAndUpdate(sold.tool, { $inc: { stock: -qty } }, { new: true });
+          if (updatedTool && updatedTool.stock <= 0) {
+            await Tool.findByIdAndUpdate(sold.tool, { status: 'Sold' });
+          }
+        } catch (tErr) { console.error('Sold tool stock update fail:', tErr.message); }
+      }
+    }
+
     // 2. Update Accessory Stock (Immediate & Explicit)
     if (req.body.accessories && Array.isArray(req.body.accessories)) {
       for (const accItem of req.body.accessories) {
@@ -533,7 +554,9 @@ async function processBookingSideEffects(newBooking, options = {}) {
       const accDesc = accList.map(a => `${a.name} (x${a.quantity})`).join(', ');
 
       const itemsList = Array.isArray(newBooking.items) ? newBooking.items : [];
+      const soldList = Array.isArray(newBooking.soldItems) ? newBooking.soldItems : [];
       const toolsDesc = itemsList.map(it => `${it.toolNumber} (${it.model})`).join(', ');
+      const soldDesc = soldList.map(s => `${s.toolNumber} (${s.model}) x${s.quantity || 1}`).join(', ');
       const toolsNo = itemsList.map(it => it.toolNumber).join(' / ');
       const accOnlyLabel = accList.map(a => a.name).filter(Boolean).join(' / ');
       const tNo = toolsNo || accOnlyLabel;
@@ -545,7 +568,7 @@ async function processBookingSideEffects(newBooking, options = {}) {
         clientNic: newBooking.clientNic || '',
         toolNo: tNo,
         toolType: itemsList.length > 1 ? 'Multiple Tools' : (itemsList[0]?.category || (accList.length ? 'Accessories' : 'Tool')),
-        jobDescription: `Rental: ${new Date(newBooking.pickupDate).toLocaleDateString()} - ${new Date(newBooking.returnDate).toLocaleDateString()}${toolsDesc ? `\nTools: ${toolsDesc}` : ''}${accDesc ? `\nAccessories: ${accDesc}` : ''}`,
+        jobDescription: `Rental: ${new Date(newBooking.pickupDate).toLocaleDateString()} - ${new Date(newBooking.returnDate).toLocaleDateString()}${toolsDesc ? `\nTools: ${toolsDesc}` : ''}${accDesc ? `\nAccessories: ${accDesc}` : ''}${soldDesc ? `\nSold: ${soldDesc}` : ''}`,
         totalUnits: newBooking.totalDays || 1,
         unitType: 'Days',
         ratePerUnit: itemsList.length === 1 ? itemsList[0].dailyRate : 0,
@@ -580,6 +603,12 @@ async function processBookingSideEffects(newBooking, options = {}) {
           name: a.name, 
           quantity: a.quantity, 
           price: a.price 
+        })),
+        soldItems: soldList.map(s => ({
+          toolNumber: s.toolNumber,
+          model: s.model,
+          price: Number(s.price) || 0,
+          quantity: Number(s.quantity) || 1
         })),
         updatedBy: newBooking.updatedBy,
         updatedByName: newBooking.updatedByName,

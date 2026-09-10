@@ -5,7 +5,7 @@ const toolSchema = new mongoose.Schema({
   model: { type: String },
   category: { type: String, default: 'General' }, 
   powerSource: { type: String, enum: ['Electric', 'Battery', 'Petrol', 'Manual'], default: 'Electric' },
-  status: { type: String, enum: ['Available', 'Booked', 'Maintenance', 'Repair', 'Maintaining', 'Under Repair', 'Unavailable'], default: 'Available' },
+  status: { type: String, enum: ['Available', 'Booked', 'Maintenance', 'Repair', 'Maintaining', 'Under Repair', 'Unavailable', 'Sold'], default: 'Available' },
   dailyRate: { type: Number, default: 0 },
   stock: { type: Number, default: 1 },
   customOverdueChargePerDay: { type: Number, default: null }, // Optional override for default overdue charge

@@ -335,6 +335,26 @@ export const generateInvoicePDF = async (invoice, mode = 'download') => {
       });
     }
 
+    // Populate Sold Items (tools purchased outright — one-time, no per-day multiplier)
+    if (invoice.soldItems && invoice.soldItems.length > 0) {
+      invoice.soldItems.forEach((sold) => {
+        const soldQty = Number(sold.quantity || 1);
+        const soldPrice = Number(sold.price || 0);
+        const soldAmount = soldPrice * soldQty;
+        let soldName = sold.toolNumber ? `Tool #${sold.toolNumber}` : 'Sold Tool';
+        if (sold.model) soldName += ` - ${sold.model}`;
+
+        itemsTableData.push([
+          itemsTableData.length + 1,
+          `Sold: ${soldName}`,
+          Number(soldPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+          soldQty,
+          '—',
+          Number(soldAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        ]);
+      });
+    }
+
     if (itemsTableData.length === 0) {
       itemsTableData.push(['-', 'No rental items recorded', '-', '-', '-', '0.00']);
     }
@@ -376,7 +396,8 @@ export const generateInvoicePDF = async (invoice, mode = 'download') => {
       : (invoiceDays) * Number(invoice.dailyRate || invoice.ratePerUnit || 0) * Number(invoice.totalUnits || invoice.quantity || 1);
         
     const accTotal = (invoice.accessories || []).reduce((sum, a) => sum + (Number(a.price || 0) * Number(a.quantity || 1) * invoiceDays), 0);
-    const subtotalItemsAndParts = serviceTotal + accTotal;
+    const soldTotal = (invoice.soldItems || []).reduce((sum, s) => sum + (Number(s.price || 0) * Number(s.quantity || 1)), 0);
+    const subtotalItemsAndParts = serviceTotal + accTotal + soldTotal;
 
     const transportTotal = Number(invoice.transportCharge || 0) + Number(invoice.otherCharges || 0);
     const fuel = Number(invoice.fuelCharge || 0);

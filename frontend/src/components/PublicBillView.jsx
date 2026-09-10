@@ -92,6 +92,13 @@ const PublicBillView = ({ token }) => {
     return { name: ac.name || 'Accessory', qty, rate, days, amount };
   });
 
+  // Sold tools are a one-time purchase — price × qty, no per-day multiplier.
+  const soldRows = (booking.soldItems || []).map(s => {
+    const qty = Number(s.quantity) || 1;
+    const price = Number(s.price) || 0;
+    return { name: `${s.toolNumber || ''} — ${s.model || 'Tool'}`, qty, rate: price, days: null, amount: price * qty };
+  });
+
   const transport = Number(booking.transportCharge) || 0;
   const fuel = Number(booking.fuelCharge) || 0;
   const labour = Number(booking.labourCharge) || 0;
@@ -156,7 +163,7 @@ const PublicBillView = ({ token }) => {
         <div style={styles.tableSection}>
           <div style={styles.sectionLabel}>RENTAL ITEMS</div>
 
-          {[...itemRows.map(r => ({ ...r, type: 'Tool' })), ...accRows.map(r => ({ ...r, type: 'Accessory' }))].map((row, i) => (
+          {[...itemRows.map(r => ({ ...r, type: 'Tool' })), ...accRows.map(r => ({ ...r, type: 'Accessory' })), ...soldRows.map(r => ({ ...r, type: 'Sold' }))].map((row, i) => (
             <div key={i} style={{
               background: i % 2 === 0 ? '#fff' : '#f8fafc',
               border: '1px solid #e2e8f0',

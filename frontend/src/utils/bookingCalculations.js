@@ -4,6 +4,7 @@ export function calculateBookingCosts(formData, totalDays = 1) {
   const days = Math.max(1, Number(totalDays) || 1);
   const items = formData.items || [];
   const accessories = formData.bookingAccessories || formData.accessories || [];
+  const soldItems = formData.soldItems || [];
   const pickup = formData.pickupDate ? new Date(formData.pickupDate) : new Date();
 
   const getCost = (item, rate) => {
@@ -58,6 +59,14 @@ export function calculateBookingCosts(formData, totalDays = 1) {
 
   const accessoriesTotal = accessoryCosts.reduce((sum, ac) => sum + ac.cost, 0);
 
+  // Sold tools are a one-time purchase — price × quantity, no per-day multiplier.
+  const soldItemCosts = soldItems.map(s => ({
+    id: s._id || s.tool || s.id,
+    cost: (Number(s.price) || 0) * (Number(s.quantity) || 1)
+  }));
+  const soldItemsTotal = soldItemCosts.reduce((sum, sc) => sum + sc.cost, 0);
+  const soldItemsPaid = soldItems.reduce((sum, s) => sum + (Number(s.amountPaid) || 0), 0);
+
   // Sum of what's actually been marked as paid on each individual tool
   // item / accessory row — this is the real "amount paid" for the booking,
   // not a separately-typed top-level value.
@@ -68,20 +77,23 @@ export function calculateBookingCosts(formData, totalDays = 1) {
   const fuel = Number(formData.fuelCharge) || 0;
   const labour = Number(formData.labourCharge) || 0;
   const discount = Number(formData.discount) || 0;
-  const advance = itemsPaid + accessoriesPaid;
+  const advance = itemsPaid + accessoriesPaid + soldItemsPaid;
 
   const extraCharges = Number(formData.extraCharges) || 0;
-  const subtotal = toolsTotal + accessoriesTotal + transport + fuel + labour + extraCharges;
+  const subtotal = toolsTotal + accessoriesTotal + soldItemsTotal + transport + fuel + labour + extraCharges;
   const totalAmount = Math.max(0, subtotal - discount);
   const balanceAmount = Math.max(0, totalAmount - advance);
 
   return {
     toolsTotal,
     accessoriesTotal,
+    soldItemsTotal,
     itemCosts,
     accessoryCosts,
+    soldItemCosts,
     itemsPaid,
     accessoriesPaid,
+    soldItemsPaid,
     subtotal,
     discount,
     advance: advance,

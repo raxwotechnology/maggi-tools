@@ -94,6 +94,17 @@ const bookingSchema = new mongoose.Schema({
     totalOverdueCharge: { type: Number, default: 0 },
     overdueSmsSentAt: { type: Date }
   }],
+  // Tools sold outright to the customer (not rented) as part of this booking.
+  // Price is entered manually per sale since it differs from the tool's rental daily rate.
+  soldItems: [{
+    tool: { type: mongoose.Schema.Types.ObjectId, ref: 'Tool' },
+    toolNumber: String,
+    model: String,
+    price: { type: Number, default: 0 },
+    quantity: { type: Number, default: 1 },
+    amountPaid: { type: Number, default: 0 },
+    amountDue: { type: Number, default: 0 }
+  }],
   notes: { type: String },
   followupSent: { type: Boolean, default: false },
   followupSentAt: { type: Date },

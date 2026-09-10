@@ -14,6 +14,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
   const [allAccessories, setAllAccessories] = useState([]);
   const [toolSearch, setToolSearch] = useState('');
   const [accSearch, setAccSearch] = useState('');
+  const [soldSearch, setSoldSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
   const [loadingTools, setLoadingTools] = useState(false);
 
@@ -49,6 +50,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
     bookingType: 'General',
     items: [], // [{ tool, toolNumber, model, category, dailyRate }]
     bookingAccessories: [], // { accessoryId, name, quantity, price }
+    soldItems: [], // [{ tool, toolNumber, model, price, quantity, amountPaid }] — tools sold outright
     discount: '',
     advancePayment: '',
     transportCharge: '',
@@ -127,8 +129,10 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
     balanceAmount: 0,
     toolsTotal: 0,
     accessoriesTotal: 0,
+    soldItemsTotal: 0,
     itemsPaid: 0,
-    accessoriesPaid: 0
+    accessoriesPaid: 0,
+    soldItemsPaid: 0
   });
 
   useEffect(() => {
@@ -315,8 +319,10 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
       balanceAmount: calc.balanceAmount,
       toolsTotal: calc.toolsTotal,
       accessoriesTotal: calc.accessoriesTotal,
+      soldItemsTotal: calc.soldItemsTotal,
       itemsPaid: calc.itemsPaid,
-      accessoriesPaid: calc.accessoriesPaid
+      accessoriesPaid: calc.accessoriesPaid,
+      soldItemsPaid: calc.soldItemsPaid
     });
     // ✅ Keep formData.advancePayment in sync with the computed paid total so
     // anything else reading formData.advancePayment directly stays correct too.
@@ -326,12 +332,61 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
         : { ...prev, advancePayment: calc.advance }
     ));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.items, formData.bookingAccessories, totalDays, formData.discount, formData.transportCharge, formData.fuelCharge, formData.labourCharge]);
+  }, [formData.items, formData.bookingAccessories, formData.soldItems, totalDays, formData.discount, formData.transportCharge, formData.fuelCharge, formData.labourCharge]);
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...formData.items];
     newItems[index] = { ...newItems[index], [field]: value };
     setFormData({ ...formData, items: newItems });
+  };
+
+  // ── Sold Items (tools purchased outright, not rented) ──
+  const addSoldItemById = (tool) => {
+    if (!tool) return;
+    setFormData(prev => {
+      if ((prev.soldItems || []).some(s => toolIdMatch(s.tool, tool._id))) return prev;
+      const newSold = {
+        tool: tool._id,
+        toolNumber: tool.number,
+        model: tool.model,
+        price: '',
+        quantity: 1,
+        amountPaid: '',
+        stock: tool.stock || 1
+      };
+      return { ...prev, soldItems: [...(prev.soldItems || []), newSold] };
+    });
+  };
+
+  const handleSoldSearchSelect = (val) => {
+    if (!val || !val.startsWith('[TOOL]')) return;
+    const match = val.match(/\[TOOL\] (.*?) -/);
+    if (!match?.[1]) return;
+    const found = availableTools.find((t) => t.number === match[1].trim());
+    if (found) addSoldItemById(found);
+    setSoldSearch('');
+  };
+
+  const handleSoldItemChange = (index, field, value) => {
+    const newSold = [...formData.soldItems];
+    newSold[index] = { ...newSold[index], [field]: value };
+    setFormData({ ...formData, soldItems: newSold });
+  };
+
+  // A tool the customer bought that isn't in our stock database — no tool id,
+  // its "name" is typed in manually instead of picked from the search box.
+  const addManualSoldItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      soldItems: [
+        ...(prev.soldItems || []),
+        { tool: null, toolNumber: '', model: '', price: '', quantity: 1, amountPaid: '', manual: true }
+      ]
+    }));
+  };
+
+  const removeSoldItem = (index) => {
+    setFormData({ ...formData, soldItems: formData.soldItems.filter((_, i) => i !== index) });
   };
 
   const addTool = (toolNum) => {
@@ -448,7 +503,8 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
       }
       const hasTools = formData.items.length > 0;
       const hasAccessories = formData.bookingAccessories.length > 0;
-      if (!hasTools && !hasAccessories) {
+      const hasSoldItems = (formData.soldItems || []).length > 0;
+      if (!hasTools && !hasAccessories && !hasSoldItems) {
         toast.warning('Please select at least one tool or accessory.');
         return;
       }
@@ -505,7 +561,16 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
             rentalDate: formData.pickupDate,
             expectedReturnDate: expRet.toISOString()
           };
-        })
+        }),
+        soldItems: (formData.soldItems || []).map(s => ({
+          ...(s.tool ? { tool: s.tool } : {}),
+          toolNumber: s.toolNumber || '',
+          model: s.model || '',
+          price: Number(s.price) || 0,
+          quantity: Number(s.quantity) || 1,
+          amountPaid: Number(s.amountPaid) || 0,
+          amountDue: Math.max(0, ((Number(s.price) || 0) * (Number(s.quantity) || 1)) - (Number(s.amountPaid) || 0))
+        }))
       };
       delete finalBooking.deposit;
       delete finalBooking.bookingAccessories;
@@ -861,6 +926,164 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
               </div>
             ))}
           </div>
+          {/* ///////////////////////////////////////////////////////////////sold items////////////////// */}
+          <div className="form-section" style={{ background: 'var(--success-soft, #ecfdf5)', border: '1px solid var(--success-glow, #a7f3d0)' }}>
+            <p className="form-section-title">
+              <Package size={16} /> Sold Items <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 500, textTransform: 'none' }}>(tools purchased outright by the customer)</span>
+            </p>
+
+            {!loadingTools && availableTools.length > 0 && (
+              <div className="tool-selector tool-selector-wide" style={{ marginBottom: '16px' }}>
+                <label className="tool-search-label">Select a tool the customer is buying</label>
+                <Autocomplete
+                  name="soldToolSearch"
+                  value={soldSearch}
+                  multiSelect
+                  onOptionSelect={handleSoldSearchSelect}
+                  onChange={(e) => setSoldSearch(e.target.value)}
+                  options={availableTools
+                    .filter((t) => t?.number)
+                    .map((t) => `[TOOL] ${t.number} - ${t.model || 'Tool'}`)}
+                  placeholder="Search and select tool to sell"
+                  className="full-width-autocomplete booking-tool-search"
+                  emptyMessage="No tools loaded"
+                />
+              </div>
+            )}
+
+            <div style={{ marginBottom: '16px' }}>
+              <button
+                type="button"
+                onClick={addManualSoldItem}
+                className="quick-add-badge"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Plus size={14} strokeWidth={3} /> Add Unregistered / Other Item
+              </button>
+              <span style={{ marginLeft: '8px', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                (for tools the customer bought that aren't in our stock list)
+              </span>
+            </div>
+
+            {(formData.soldItems || []).map((sold, index) => (
+              <div key={index} className="tool-item-row">
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Tool Info</label>
+                  {sold.manual ? (
+                    <input
+                      type="text"
+                      placeholder="Item name / description"
+                      value={sold.model || ''}
+                      onChange={(e) => handleSoldItemChange(index, "model", e.target.value)}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        padding: "10px",
+                        background: "var(--bg-main)",
+                        borderRadius: "6px",
+                        fontSize: "0.9rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {sold.toolNumber} - {sold.model}
+                    </div>
+                  )}
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Sale Price (LKR)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Price"
+                    value={sold.price === 0 ? '' : sold.price}
+                    onChange={(e) =>
+                      handleSoldItemChange(index, "price", e.target.value === '' ? '' : Number(e.target.value))
+                    }
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Quantity{!sold.manual && (
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}> ({sold.stock || 1} available)</span>
+                  )}</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={sold.manual ? undefined : (sold.stock || 1)}
+                    value={sold.quantity || 1}
+                    onChange={(e) =>
+                      handleSoldItemChange(index, "quantity", Number(e.target.value))
+                    }
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Subtotal</label>
+                  <input
+                    type="text"
+                    value={`LKR ${((Number(sold.price) || 0) * (sold.quantity || 1)).toLocaleString()}`}
+                    readOnly
+                    className="input-highlight-blue"
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Paid</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="LKR"
+                    value={sold.amountPaid === 0 ? '' : sold.amountPaid}
+                    onChange={(e) =>
+                      handleSoldItemChange(index, "amountPaid", e.target.value === '' ? '' : Number(e.target.value))
+                    }
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Due</label>
+                  <input
+                    type="text"
+                    value={`LKR ${Math.max(0, ((Number(sold.price) || 0) * (sold.quantity || 1)) - (Number(sold.amountPaid) || 0)).toLocaleString()}`}
+                    readOnly
+                    style={{ color: (((Number(sold.price) || 0) * (sold.quantity || 1)) - (Number(sold.amountPaid) || 0)) > 0 ? 'var(--danger)' : 'var(--success)', fontWeight: 700 }}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-end",
+                    paddingBottom: "4px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => removeSoldItem(index)}
+                    style={{
+                      background: "var(--danger-soft)",
+                      color: "var(--danger)",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "10px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <TrendingUp
+                      style={{ transform: "rotate(45deg)" }}
+                      size={18}
+                    />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {(formData.soldItems || []).length === 0 && (
+              <p className="tool-search-hint">No tools being sold on this booking. Search above to add one.</p>
+            )}
+          </div>
           {/* ///////////////////////////////////////////////////////////////select////////////////// */}
           <div className="form-section">
             <p className="form-section-title"><Package size={16} /> Selected Parts & Accessories</p>
@@ -1201,7 +1424,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
                 <label>
                   Amount Paid (LKR){' '}
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                    (auto — sum of each tool/accessory "Paid" field below)
+                    (auto — sum of each tool/accessory/sold item "Paid" field below)
                   </span>
                 </label>
                 {/* ✅ FIX: no longer a manual input. This is now a read-only
@@ -1209,7 +1432,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
                     and accessory's individual "Paid" amount. */}
                 <input
                   type="text"
-                  value={`LKR ${((costs.itemsPaid || 0) + (costs.accessoriesPaid || 0)).toLocaleString()}`}
+                  value={`LKR ${((costs.itemsPaid || 0) + (costs.accessoriesPaid || 0) + (costs.soldItemsPaid || 0)).toLocaleString()}`}
                   readOnly
                   className="input-highlight-blue"
                   style={{ fontWeight: 700 }}
@@ -1353,6 +1576,13 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
                 </div>
               )}
 
+              {(formData.soldItems || []).length > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                  <span>Sold Items</span>
+                  <span>LKR {(costs.soldItemsTotal || 0).toLocaleString()}</span>
+                </div>
+              )}
+
               {formData.transportCharge > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                   <span>Transport Charges</span>
@@ -1423,7 +1653,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
               >
                 <span>PAID</span>
                 <span style={{ color: 'var(--success)' }}>
-                  LKR {((costs.itemsPaid || 0) + (costs.accessoriesPaid || 0)).toLocaleString()}
+                  LKR {((costs.itemsPaid || 0) + (costs.accessoriesPaid || 0) + (costs.soldItemsPaid || 0)).toLocaleString()}
                 </span>
               </div>
 
@@ -1437,7 +1667,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
               >
                 <span>
                   BOOKING BALANCE
-                  {costs.balanceAmount > 0 && ((costs.itemsPaid || 0) + (costs.accessoriesPaid || 0)) > 0 && (
+                  {costs.balanceAmount > 0 && ((costs.itemsPaid || 0) + (costs.accessoriesPaid || 0) + (costs.soldItemsPaid || 0)) > 0 && (
                     <span style={{
                       marginLeft: '8px',
                       fontSize: '0.65rem',
