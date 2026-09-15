@@ -1,13 +1,14 @@
 /* MAGGI TOOLS App Layout v4 */
 
-.app-layout { display:flex; min-height:100vh; }
+.app-layout { display:flex; min-height:100vh; width:100%; max-width:100vw; overflow-x:hidden; }
 
 .main-content {
   flex:1; margin-left:var(--sidebar-w);
   display:flex; flex-direction:column;
-  min-width:0; min-height:100vh;
+  min-width:0; max-width:100%; width:100%; min-height:100vh;
   transition:margin-left var(--theme-speed) cubic-bezier(0.4,0,0.2,1);
   background:var(--bg-main);
+  overflow-x:hidden;
 }
 
 .main-header {
@@ -19,6 +20,8 @@
   position:sticky; top:0; z-index:900;
   box-shadow:var(--shadow-sm);
   gap:16px;
+  width:100%;
+  box-sizing:border-box;
 }
 
 .main-header::after {
@@ -60,14 +63,14 @@
 .header-logout-btn:hover { background:var(--danger); color:#fff; box-shadow:0 4px 12px var(--danger-glow); }
 .header-logout-btn svg { width:14px!important; height:14px!important; }
 
-.content-area { flex:1; padding:28px 32px; max-width:1600px; margin:0 auto; width:100%; animation:contentFadeIn 0.3s ease; overflow-x:hidden; }
+.content-area { flex:1; padding:28px 32px; max-width:1600px; margin:0 auto; width:100%; animation:contentFadeIn 0.3s ease; overflow-x:hidden; box-sizing:border-box; min-width:0; }
 @keyframes contentFadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
 .sidebar-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.50); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:950; animation:fadeIn 0.2s ease; }
 
 @media (max-width:1200px) { .content-area{padding:24px 20px} .main-header{padding:0 20px} }
 @media (max-width:1024px) {
-  .main-content { margin-left:0; width:100%; }
+  .main-content { margin-left:0; width:100%; max-width:100vw; }
   .mobile-menu-btn { display:flex; }
   .desktop-collapse-btn { display:none; }
   .user-details { display:none; }
@@ -76,13 +79,13 @@
   .user-nav-info { padding:4px; border-radius:50%; }
 }
 @media (max-width:768px) {
-  .main-header { height:58px; padding:0 14px; gap:8px; }
+  .main-header { height:58px; padding:0 12px; gap:8px; width:100%; max-width:100vw; box-sizing:border-box; }
   .header-left { gap:8px; }
   .header-left h2 { font-size:0.875rem; max-width:120px; }
   .header-right { gap:6px; }
   .nav-avatar,.theme-toggle-btn,.header-logout-btn,.mobile-menu-btn { width:36px!important; height:36px!important; min-width:36px!important; padding:0!important; display:flex!important; justify-content:center!important; align-items:center!important; }
-  .content-area { padding:16px 14px 80px; }
+  .content-area { padding:14px 12px 80px; width:100%; max-width:100vw; box-sizing:border-box; }
 }
-@media (max-width:480px) { .header-left h2{display:none} .content-area{padding:12px 10px 76px} }
+@media (max-width:480px) { .header-left h2{display:none} .content-area{padding:10px 8px 76px; width:100%; max-width:100vw; box-sizing:border-box;} }
 @keyframes rotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 .spinner { display:inline-block; animation:rotate 1.2s linear infinite; }

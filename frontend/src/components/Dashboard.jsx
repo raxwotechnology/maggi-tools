@@ -294,19 +294,29 @@ const Dashboard = ({ role = 'User', name = 'Guest', setActiveTab }) => {
         </div>
         <p className="header-subtitle">Operations Dashboard</p>
       </div>
-      <div className="book-filters" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', flexWrap: 'nowrap', width: '100%', marginBottom: '24px' }}>
-        <div className="search-box-unified" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0 8px 0 12px', flex: 1, height: '44px', background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: 'var(--r-md)', minWidth: '0' }}>
-          <Calendar size={16} style={{ color: 'var(--text-dim)', flexShrink: 0 }} />
-          <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ border: 'none', background: 'none', fontWeight: 700, cursor: 'pointer', color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none', width: '60%', padding: '0', minWidth: '0' }}>
+      <div className="dashboard-filter-bar">
+        <div className="dashboard-filter-group">
+          <Calendar size={16} className="filter-calendar-icon" />
+          <select 
+            value={selectedMonth} 
+            onChange={e => setSelectedMonth(e.target.value)} 
+            className="dashboard-select"
+            aria-label="Filter by month"
+          >
             <option value="All">All Months</option>
             {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
-          <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)} style={{ border: 'none', background: 'none', fontWeight: 700, cursor: 'pointer', color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none', width: '40%', padding: '0', minWidth: '0' }}>
+          <select 
+            value={selectedYear} 
+            onChange={e => setSelectedYear(e.target.value)} 
+            className="dashboard-select"
+            aria-label="Filter by year"
+          >
             {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
 
-        <button className="utility-icon-btn" onClick={() => fetchAll(false)} title="Sync Dashboard" style={{ height: '44px', width: '44px', minWidth: '44px', flexShrink: 0 }}>
+        <button className="utility-icon-btn dashboard-sync-btn" onClick={() => fetchAll(false)} title="Sync Dashboard">
           <RefreshCw size={18} className={loading ? 'spinner' : ''} />
         </button>
       </div>
