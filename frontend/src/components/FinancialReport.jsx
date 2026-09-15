@@ -290,7 +290,7 @@ const FinancialReport = ({ appSettings }) => {
         <div className="report-divider" />
 
         <div className="report-actions-group">
-          <button className="utility-icon-btn" onClick={() => fetchAll(false)} title="Refresh Data" style={{ height: '44px' }}>
+          <button className="secondary-btn" onClick={() => fetchAll(false)} title="Refresh Data" style={{ height: '44px', padding: '0 16px', gap: '8px' }}>
             <RefreshCw size={16} className={refreshing ? 'spinner' : ''} />
             <span style={{ fontSize: '0.85rem', fontWeight: '700' }}>{refreshing ? 'Reloading...' : 'Refresh'}</span>
           </button>

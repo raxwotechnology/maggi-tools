@@ -141,46 +141,28 @@ const ConsumablesBook = () => {
         </div>
         <p className="header-subtitle">Inventory & Operations</p>
       </div>
-      <div className="book-filters">
-        <div className="bf-top-row">
-          
-           <div className="search-and-refresh" style={{ display: 'flex', gap: '8px', flex: 1 }}>
-            <div className="search-box-unified">
-             <Search className="search-icon" size={18} />
-             <input type="text" placeholder="Search logs..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-           </div>
-            <button className="utility-icon-btn" onClick={fetchRecords} title="Refresh"><RefreshCw size={18} className={loading ? 'spinner' : ''} /></button>
-          </div>
-           
-           {canManage && (
-             <button className="add-btn" onClick={() => { setEditingItem(null); setIsModalOpen(true); }} style={{ height: '48px', padding: '0 24px' }}>
-               <PlusCircle size={18} /> Add Entry
-             </button>
-           )}
-        
-        </div>
-      </div>
-
+      {/* ── Summary Stats ── */}
       <div className="book-summary">
         <div className="summary-item">
           <label>Total Consumption</label>
           <h3>{stats.totalLiters.toFixed(1)} Units</h3>
-          <Droplets size={16} color="var(--accent)" style={{ position: 'absolute', top: '20px', right: '20px', opacity: 0.2 }} />
+          <Droplets size={18} color="var(--color-ops)" style={{ position: 'absolute', top: '18px', right: '18px', opacity: 0.25 }} />
         </div>
         <div className="summary-item">
           <label>Total Running Cost</label>
           <h3 style={{ color: 'var(--danger)' }}>LKR {stats.totalCost.toLocaleString()}</h3>
-          <TrendingDown size={16} color="var(--danger)" style={{ position: 'absolute', top: '20px', right: '20px', opacity: 0.2 }} />
+          <TrendingDown size={18} color="var(--danger)" style={{ position: 'absolute', top: '18px', right: '18px', opacity: 0.25 }} />
         </div>
         <div className="summary-item">
           <label>Avg Price / Unit</label>
           <h3 style={{ color: 'var(--success)' }}>LKR {stats.avgPrice.toFixed(2)}</h3>
-          <Info size={16} color="var(--success)" style={{ position: 'absolute', top: '20px', right: '20px', opacity: 0.2 }} />
+          <Info size={18} color="var(--success)" style={{ position: 'absolute', top: '18px', right: '18px', opacity: 0.25 }} />
         </div>
       </div>
 
+      {/* ── Filter Bar ── */}
       <div className="book-filters">
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1, minWidth: 0 }}>
+        <div className="bf-top-row">
           <div className="tab-switcher" style={{ margin: 0, flexShrink: 0 }}>
             {FUEL_TYPES.map(type => (
               <button key={type} className={selectedFuelType === type ? 'active-tab' : ''} onClick={() => setSelectedFuelType(type)}>
@@ -188,11 +170,27 @@ const ConsumablesBook = () => {
               </button>
             ))}
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="search-box-unified" style={{ minWidth: '220px' }}>
+            <Search className="search-icon" size={18} />
+            <input type="text" placeholder="Search logs..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+          </div>
+          <div style={{ minWidth: '180px' }}>
             <ToolFilter tools={tools} selectedTool={selectedTool} onSelect={setSelectedTool} />
           </div>
+          <div className="bf-action-btns">
+            <button className="utility-icon-btn" onClick={fetchRecords} title="Refresh Data">
+              <RefreshCw size={18} className={loading ? 'spinner' : ''} />
+            </button>
+            <button className="utility-icon-btn" onClick={handleExportPDF} title="Export PDF">
+              <Download size={18} />
+            </button>
+            {canManage && (
+              <button className="add-btn" onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>
+                <PlusCircle size={18} /> Add Entry
+              </button>
+            )}
+          </div>
         </div>
-        <button className="action-icon-btn btn-print" onClick={handleExportPDF} title="Export PDF" style={{ width: '48px', height: '48px' }}><Download size={18} /></button>
       </div>
 
       {success && <div className="form-info-banner" style={{ background: 'var(--success)', color: '#fff', border: 'none' }}><CheckCircle size={18} /> {success}</div>}

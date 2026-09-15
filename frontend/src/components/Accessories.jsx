@@ -110,29 +110,28 @@ const Accessories = () => {
 
       {/* ── Filter Bar ── */}
       <div className="book-filters">
-        <div className="search-and-refresh" style={{ display: 'flex', gap: '8px', flex: 1 }}>
-            <div className="search-box-unified">
-          <Search className="search-icon" size={18} />
-          <input
-            type="text"
-            placeholder="Search by ID, name or category…"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
-        </div>
-            <button className="utility-icon-btn" onClick={fetchData} title="Refresh">
-            <RefreshCw size={18} className={loading ? 'spinner' : ''} />
-          </button>
+        <div className="bf-top-row">
+          <div className="search-box-unified">
+            <Search className="search-icon" size={18} />
+            <input
+              type="text"
+              placeholder="Search by ID, name or category…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
           </div>
-        <div className="filter-actions">
-          
-          <button className="add-btn" onClick={() => {
-            setEditingItem(null);
-            setFormData({ number: '', name: '', category: '', price: '', stock: '', unit: 'pcs', description: '' });
-            setIsModalOpen(true);
-          }}>
-            <PlusCircle size={18} /> Add Accessory
-          </button>
+          <div className="bf-action-btns">
+            <button className="utility-icon-btn" onClick={fetchData} title="Refresh Data">
+              <RefreshCw size={18} className={loading ? 'spinner' : ''} />
+            </button>
+            <button className="add-btn" onClick={() => {
+              setEditingItem(null);
+              setFormData({ number: '', name: '', category: '', price: '', stock: '', unit: 'pcs', description: '' });
+              setIsModalOpen(true);
+            }}>
+              <PlusCircle size={18} /> Add Accessory
+            </button>
+          </div>
         </div>
       </div>
 

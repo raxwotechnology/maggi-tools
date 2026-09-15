@@ -714,3 +714,234 @@
     max-width: 260px;
   }
 }
+
+/* ── Return Single Tool & Complete Modal Styles ── */
+.btn-complete-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-fin-gradient, linear-gradient(135deg, #059669 0%, #10B981 100%));
+  color: #ffffff !important;
+  border: none;
+  border-radius: var(--r-md);
+  padding: 8px 16px;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(5,150,105,0.28);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.btn-complete-tool:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(5,150,105,0.38);
+}
+.btn-complete-tool svg {
+  width: 15px !important;
+  height: 15px !important;
+}
+
+.return-tool-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 4px 0;
+}
+
+.return-tool-header-card {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.return-tool-calc-box {
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.return-tool-calc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.return-tool-calc-row strong {
+  color: var(--text-main);
+  font-weight: 800;
+}
+.return-tool-calc-row.highlight {
+  font-size: 1rem;
+  color: var(--accent);
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.return-tool-calc-row.highlight strong {
+  color: var(--accent);
+  font-size: 1.1rem;
+}
+
+/* ── Modal Top Actions Header Bar ── */
+.detail-actions-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.rd-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  outline: none;
+  white-space: nowrap;
+  user-select: none;
+}
+.rd-action-btn:active {
+  transform: scale(0.98);
+}
+.rd-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rd-btn-sms {
+  background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+.rd-btn-sms:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+
+.rd-btn-whatsapp {
+  background: #25D366;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.25);
+}
+.rd-btn-whatsapp:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
+}
+
+.rd-btn-link {
+  background: var(--bg-main);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+}
+.rd-btn-link:hover:not(:disabled) {
+  background: var(--bg-side);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.rd-btn-pdf {
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+.rd-btn-pdf:hover:not(:disabled) {
+  transform: translateY(-1px);
+  opacity: 0.94;
+}
+
+.rd-btn-print {
+  background: var(--bg-main);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+}
+.rd-btn-print:hover:not(:disabled) {
+  background: var(--bg-side);
+  border-color: var(--text-main);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  .detail-actions-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px;
+  }
+  .rd-action-btn {
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .record-header {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .record-name {
+    font-size: 0.95rem;
+  }
+  .record-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+  .record-icon svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .detail-field {
+    padding: 10px 12px;
+  }
+  .detail-field-value {
+    font-size: 0.85rem;
+  }
+  .financial-summary {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .fin-item {
+    padding: 10px 12px;
+  }
+  .fin-item-value {
+    font-size: 0.95rem;
+  }
+  .return-tool-header-card {
+    padding: 10px 12px;
+  }
+  .return-tool-calc-box {
+    padding: 10px 12px;
+  }
+  .return-tool-calc-row {
+    font-size: 0.8rem;
+  }
+  .btn-complete-tool {
+    padding: 7px 12px;
+    font-size: 0.75rem;
+  }
+}
+

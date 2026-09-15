@@ -88,14 +88,16 @@ const Cheques = () => {
 
   return (
     <div className="book-container">
-      <div className="dashboard-header">
-        <div>
-          <p className="form-text-dim" style={{ margin: 0 }}>Financial Management</p>
-          <h1>Cheque Ledger</h1>
+      <div className="book-header">
+        <div className="header-title">
+          <p className="book-subtitle" style={{ margin: 0 }}>Financial Management</p>
+          <h2 className="book-title">Cheque Ledger</h2>
         </div>
-        <button className="add-btn" onClick={() => { setEditingId(null); setFormData({ chequeNumber: '', bank: '', amount: 0, dueDate: new Date().toISOString().split('T')[0], client: '', type: 'Incoming', status: 'Pending', accountId: '' }); setIsModalOpen(true); }}>
-          <PlusCircle size={18} /> Record Cheque
-        </button>
+        <div className="book-header-actions">
+          <button className="add-btn" onClick={() => { setEditingId(null); setFormData({ chequeNumber: '', bank: '', amount: 0, dueDate: new Date().toISOString().split('T')[0], client: '', type: 'Incoming', status: 'Pending', accountId: '' }); setIsModalOpen(true); }}>
+            <PlusCircle size={18} /> Record Cheque
+          </button>
+        </div>
       </div>
 
       <div className="book-summary">

@@ -207,71 +207,92 @@ const Tools = () => {
 
   return (
     <div className="book-container">
-      <div className="book-header" style={{ marginBottom: '10px' }}>
-        <div className="header-title">
-          <Wrench />
-          <h2>Tool Inventory</h2>
+      {/* ── Top Summary Stats ── */}
+      <div className="book-summary">
+        <div className="summary-item">
+          <label>Total Quantity</label>
+          <h3>{toolRecords.reduce((s, t) => s + (t.rawData?.stock || 0), 0)}</h3>
+          <Package size={20} color="var(--color-ops)" style={{ position: 'absolute', top: '18px', right: '18px', opacity: 0.25 }} />
         </div>
-        <p className="header-subtitle">Manage tools, stock levels, and monitor leasing schedules.</p>
+        <div className="summary-item">
+          <label>Currently Booked</label>
+          <h3 style={{ color: 'var(--warning)' }}>{toolRecords.filter(t => t.rawData?.status === 'Booked').length}</h3>
+          <AlertCircle size={20} color="var(--warning)" style={{ position: 'absolute', top: '18px', right: '18px', opacity: 0.25 }} />
+        </div>
+        <div className="summary-item">
+          <label>Available Now</label>
+          <h3 style={{ color: 'var(--success)' }}>{toolRecords.reduce((s, t) => s + (t.rawData?.status === 'Available' ? (t.rawData?.stock || 1) : 0), 0)}</h3>
+          <CheckCircle size={20} color="var(--success)" style={{ position: 'absolute', top: '18px', right: '18px', opacity: 0.25 }} />
+        </div>
       </div>
 
+      {/* ── Unified Controls & Filters Bar ── */}
       <div className="book-filters">
         <div className="bf-top-row">
-          <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
-            <div className="search-and-refresh" style={{ display: 'flex', gap: '8px', flex: 1 }}>
-            <div className="search-box-unified">
-            <Search className="search-icon" size={18} />
-            <input type="text" placeholder="Search inventory by ID or Model..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-          </div>
-            <button className="utility-icon-btn" onClick={fetchTools} title="Refresh">
-              <RefreshCw size={18} className={loading ? 'spinner' : ''} />
+          <div className="tab-switcher" style={{ margin: 0 }}>
+            <button
+              type="button"
+              onClick={() => setActiveTab('inventory')}
+              className={activeTab === 'inventory' ? 'active-tab' : ''}
+            >
+              Tool List
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('leasing')}
+              className={activeTab === 'leasing' ? 'active-tab' : ''}
+            >
+              Leasing Book
             </button>
           </div>
-            
+
+          <div className="search-box-unified" style={{ minWidth: '260px' }}>
+            <Search className="search-icon" size={18} />
+            <input
+              type="text"
+              placeholder="Search inventory by ID, Model, Category..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
           </div>
+
           <div className="bf-action-btns">
+            <button className="utility-icon-btn" onClick={fetchTools} title="Refresh Data">
+              <RefreshCw size={18} className={loading ? 'spinner' : ''} />
+            </button>
             <button className="utility-icon-btn" onClick={handleExportPDF} title="Export PDF">
               <Download size={18} />
             </button>
-            
             {canManage && (
-              <button className="add-btn" onClick={() => { setSelectedRecord(null); setIsModalOpen(true); }}>
-                <PlusCircle size={16} /> Add Tool
+              <button
+                className="add-btn"
+                onClick={() => { setSelectedRecord(null); setIsModalOpen(true); }}
+              >
+                <PlusCircle size={18} /> Add Tool
               </button>
             )}
           </div>
         </div>
       </div>
 
-      <div className="book-summary">
-        <div className="summary-item">
-          <label>Total Quantity</label>
-          <h3>{toolRecords.reduce((s, t) => s + (t.rawData?.stock || 0), 0)}</h3>
-          <Package size={16} color="var(--accent)" style={{ position: 'absolute', top: '20px', right: '20px', opacity: 0.2 }} />
-        </div>
-        <div className="summary-item">
-          <label>Currently Booked</label>
-          <h3 style={{ color: 'var(--accent)' }}>{toolRecords.filter(t => t.rawData?.status === 'Booked').length}</h3>
-          <AlertCircle size={16} color="var(--accent)" style={{ position: 'absolute', top: '20px', right: '20px', opacity: 0.2 }} />
-        </div>
-        <div className="summary-item">
-          <label>Available Now</label>
-          <h3 style={{ color: 'var(--success)' }}>{toolRecords.reduce((s, t) => s + (t.rawData?.status === 'Available' ? (t.rawData?.stock || 1) : 0), 0)}</h3>
-          <CheckCircle size={16} color="var(--success)" style={{ position: 'absolute', top: '20px', right: '20px', opacity: 0.2 }} />
-        </div>
-      </div>
-
-      <div className="tab-switcher">
-        <button onClick={() => setActiveTab('inventory')} className={activeTab === 'inventory' ? 'active-tab' : ''}>Tool List</button>
-        <button onClick={() => setActiveTab('leasing')} className={activeTab === 'leasing' ? 'active-tab' : ''}>Leasing Book</button>
-      </div>
-
+      {/* ── Main Content Area ── */}
       {activeTab === 'inventory' ? (
-        <div className="compliance-card">
-          <DataTable columns={columns} data={filteredRecords} loading={loading} onRowClick={(row) => { setSelectedRecord(row); setViewModalOpen(true); }} />
+        <div className="compliance-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <DataTable
+            columns={columns}
+            data={filteredRecords}
+            loading={loading}
+            onRowClick={(row) => { setSelectedRecord(row); setViewModalOpen(true); }}
+          />
         </div>
       ) : (
-        <LeasingBook tools={toolRecords} onPaymentToggle={async (id, y, m, p) => { await markLeasePayment(id, y, m, p); fetchTools(); }} />
+        <LeasingBook
+          tools={toolRecords}
+          onPaymentToggle={async (id, y, m, p) => {
+            await markLeasePayment(id, y, m, p);
+            fetchTools();
+          }}
+        />
       )}
 
       <Modal isOpen={viewModalOpen} onClose={() => setViewModalOpen(false)} title="Tool Profile">

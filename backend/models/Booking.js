@@ -22,7 +22,7 @@ const bookingSchema = new mongoose.Schema({
     returnedQuantity: { type: Number, default: 0 },
     amountPaid: { type: Number, default: 0 },
     amountDue: { type: Number, default: 0 },
-    returnDates: [{ quantity: Number, date: Date }],
+    returnDates: [{ quantity: Number, date: Date, days: Number }],
     // Per-item rental schedule
     rentalDate: { type: Date },
     expectedReturnDate: { type: Date },
@@ -81,7 +81,7 @@ const bookingSchema = new mongoose.Schema({
     returnedQuantity: { type: Number, default: 0 },
     amountPaid: { type: Number, default: 0 },
     amountDue: { type: Number, default: 0 },
-    returnDates: [{ quantity: Number, date: Date }],
+    returnDates: [{ quantity: Number, date: Date, days: Number }],
     // Per-accessory rental schedule
     rentalDate: { type: Date },
     expectedReturnDate: { type: Date },

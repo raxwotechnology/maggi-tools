@@ -242,6 +242,10 @@ export const bookingAPI     = {
     api.get(`bookings/insights`),
   bulkCreate: (bookings) => 
     api.post(`bookings/bulk`, { bookings }),
+  returnSingleItem: (id, payload) =>
+    api.put(`bookings/${id}/return-single-item`, payload),
+  partialReturn: (id, payload) =>
+    api.put(`bookings/${id}/partial-return`, payload),
   sendReminder: (id, customMessage) =>
     api.post(`bookings/${id}/remind`, customMessage != null ? { customMessage } : {}),
   getClientDetails: (clientName) =>

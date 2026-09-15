@@ -24,21 +24,34 @@ function generateBillViewUrl(bookingId) {
 
 function verifyBillViewToken(token) {
   if (!token) throw new Error('Invalid bill token');
-  
-  // Try to decode as legacy JWT first
+  const clean = String(token).trim();
+  if (!clean) throw new Error('Invalid bill token');
+
+  // 1. Direct MongoDB 24-char hex ObjectId
+  if (clean.length === 24 && /^[0-9a-fA-F]{24}$/.test(clean)) {
+    return { bookingId: clean, type: 'bill' };
+  }
+
+  // 2. Try verifying as JWT
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.type === 'bill' && decoded.bookingId) {
-      return decoded;
+    const decoded = jwt.verify(clean, JWT_SECRET);
+    if (decoded && (decoded.bookingId || decoded.id)) {
+      return { bookingId: decoded.bookingId || decoded.id, type: 'bill' };
     }
-  } catch (err) {
-    // If it fails to verify as JWT, check if it's a valid 24-char hex MongoDB ObjectId
-    if (typeof token === 'string' && token.length === 24 && /^[0-9a-fA-F]{24}$/.test(token)) {
-      return { bookingId: token, type: 'bill' };
+  } catch (_err) {
+    // 3. If JWT verification failed (e.g. expired token), decode payload directly
+    try {
+      const decoded = jwt.decode(clean);
+      if (decoded && (decoded.bookingId || decoded.id)) {
+        return { bookingId: decoded.bookingId || decoded.id, type: 'bill' };
+      }
+    } catch (_decodeErr) {
+      // ignore
     }
   }
-  
-  throw new Error('Invalid bill token');
+
+  // 4. Return as raw identifier (e.g. invoiceNo or custom id)
+  return { bookingId: clean, type: 'bill' };
 }
 
 module.exports = {
@@ -46,3 +59,4 @@ module.exports = {
   verifyBillViewToken,
   getPublicFrontendBase
 };
+

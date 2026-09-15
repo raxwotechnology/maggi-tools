@@ -441,7 +441,13 @@ const BookingBook = ({ setActiveTab }) => {
     if (!record.clientPhone) return toast.warning('No phone number found.');
 
     const phone = record.clientPhone.replace(/[^0-9]/g, '');
-    const msg = encodeURIComponent(`Reminder from DVD Tool Rentals: Dear ${record.clientName}, your rental of ${record.tool ? record.tool.number : 'Tool'} is due on ${formatDateYMD(record.returnDate)}. Please ensure timely return to avoid extra charges.`);
+    const billUrl = `${window.location.origin}/bill/${record._id}`;
+    const total = Number(record.totalAmount || 0).toLocaleString();
+    const paid = Number(record.advancePayment || 0).toLocaleString();
+    const bal = Number(record.balanceAmount || 0).toLocaleString();
+    const msg = encodeURIComponent(
+      `Hello ${record.clientName || 'Customer'},\nHere is your rental bill from MAGGI TOOLS:\nTotal: LKR ${total}\nPaid: LKR ${paid}\nBalance Due: LKR ${bal}\n\nView Bill Details online:\n${billUrl}\n\nThank you!`
+    );
     window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
   };
 
@@ -688,51 +694,89 @@ const BookingBook = ({ setActiveTab }) => {
       <div className="compliance-card">
         <DataTable
           columns={tableColumns}
-          data={flatRows.map(r => ({
-            ...r,
-            'INV#': <span style={{ fontWeight: 800, color: 'var(--text-dim)' }}>{r.displayInvoiceNo || '—'}</span>,
-            CUSTOMER: <strong style={{ color: 'var(--text-main)' }}>{r.clientName || '—'}</strong>,
-            TOOL: (
-              <div className="tool-single-pill" title={r.itemModel ? `${r.itemToolNumber} — ${r.itemModel}` : r.itemToolNumber}>
-                <Package size={13} className="tool-pill-icon" />
-                <span className="tool-pill-number">{r.itemToolNumber}</span>
-                {r.itemModel && <span className="tool-pill-model">{r.itemModel}</span>}
-                {r.itemQuantity > 1 && (
-                  <span className="tool-pill-model" style={{ fontWeight: 700 }}>x{r.itemQuantity}</span>
-                )}
-              </div>
-            ),
-            PICKUP: r.displayPickup,
-            RETURN: r.displayReturn,
-            DAYS: <span className="status-badge status-confirmed" style={{ background: 'var(--bg-side)', color: 'var(--text-main)' }}>{r.totalDays || 1} Days</span>,
-            TOTAL: <strong style={{ color: 'var(--text-main)', whiteSpace: 'nowrap' }}>LKR {Number(r.itemLineTotal || 0).toLocaleString()}</strong>,
-            PAID: <strong style={{ color: 'var(--success)', whiteSpace: 'nowrap' }}>LKR {(r.advancePayment || 0).toLocaleString()}</strong>,
-            // ✅ FIX: BALANCE column now also shows a "Partial Paid" badge
-            // whenever there's still a balance owing but the customer HAS
-            // already paid something (advancePayment > 0). Previously this
-            // just showed the raw balance number with no payment-state hint.
-            BALANCE: (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
-                <strong style={{ color: (r.balanceAmount || 0) > 0 ? 'var(--danger)' : 'var(--accent)', whiteSpace: 'nowrap' }}>
-                  LKR {Math.max(0, r.balanceAmount || 0).toLocaleString()}
-                </strong>
-                {Number(r.balanceAmount || 0) > 0 && Number(r.advancePayment || 0) > 0 && (
-                  <span
-                    style={{
-                      fontSize: '0.65rem',
-                      fontWeight: 800,
-                      color: '#b45309',
-                      background: '#fef3c7',
-                      padding: '1px 8px',
-                      borderRadius: '999px',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    Partial Paid
-                  </span>
-                )}
-              </div>
-            ),
+          data={filteredRecords.map(r => {
+            const items = Array.isArray(r.items) && r.items.length > 0 ? r.items : null;
+            const accs = Array.isArray(r.accessories) && r.accessories.length > 0 ? r.accessories : [];
+            const sold = Array.isArray(r.soldItems) && r.soldItems.length > 0 ? r.soldItems : [];
+
+            let toolContent;
+            if (items && items.length > 0) {
+              toolContent = (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxWidth: '320px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    {items.map((it, idx) => (
+                      <div
+                        key={idx}
+                        className="tool-single-pill"
+                        title={it.model ? `${it.toolNumber} — ${it.model}` : it.toolNumber}
+                        style={{ margin: 0 }}
+                      >
+                        <Package size={12} className="tool-pill-icon" />
+                        <span className="tool-pill-number">{it.toolNumber || '—'}</span>
+                        {it.model && <span className="tool-pill-model">{it.model}</span>}
+                        {Number(it.quantity) > 1 && (
+                          <span className="tool-pill-model" style={{ fontWeight: 700 }}>x{it.quantity}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {accs.length > 0 && (
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 600 }}>
+                      + {accs.map(a => `${a.name} (x${a.quantity || 1})`).join(', ')}
+                    </div>
+                  )}
+                  {sold.length > 0 && (
+                    <div style={{ fontSize: '0.72rem', color: 'var(--success)', fontWeight: 600 }}>
+                      + Sold: {sold.map(s => `${s.toolNumber || s.model} (x${s.quantity || 1})`).join(', ')}
+                    </div>
+                  )}
+                </div>
+              );
+            } else {
+              const toolObj = r.tool;
+              const toolNumber = (typeof toolObj === 'object' && toolObj) ? (toolObj.number || '') : (r.toolNo || '');
+              const model = (typeof toolObj === 'object' && toolObj) ? (toolObj.model || '') : (r.toolModel || '');
+              toolContent = (
+                <div className="tool-single-pill" title={model ? `${toolNumber} — ${model}` : toolNumber}>
+                  <Package size={13} className="tool-pill-icon" />
+                  <span className="tool-pill-number">{toolNumber || '—'}</span>
+                  {model && <span className="tool-pill-model">{model}</span>}
+                </div>
+              );
+            }
+
+            return {
+              ...r,
+              'INV#': <span style={{ fontWeight: 800, color: 'var(--text-dim)' }}>{r.displayInvoiceNo || '—'}</span>,
+              CUSTOMER: <strong style={{ color: 'var(--text-main)' }}>{r.clientName || '—'}</strong>,
+              TOOL: toolContent,
+              PICKUP: r.displayPickup,
+              RETURN: r.displayReturn,
+              DAYS: <span className="status-badge status-confirmed" style={{ background: 'var(--bg-side)', color: 'var(--text-main)' }}>{r.totalDays || 1} Days</span>,
+              TOTAL: <strong style={{ color: 'var(--text-main)', whiteSpace: 'nowrap' }}>LKR {Number(r.totalAmount || 0).toLocaleString()}</strong>,
+              PAID: <strong style={{ color: 'var(--success)', whiteSpace: 'nowrap' }}>LKR {Number(r.advancePayment || 0).toLocaleString()}</strong>,
+              BALANCE: (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
+                  <strong style={{ color: (r.balanceAmount || 0) > 0 ? 'var(--danger)' : 'var(--accent)', whiteSpace: 'nowrap' }}>
+                    LKR {Math.max(0, r.balanceAmount || 0).toLocaleString()}
+                  </strong>
+                  {Number(r.balanceAmount || 0) > 0 && Number(r.advancePayment || 0) > 0 && (
+                    <span
+                      style={{
+                        fontSize: '0.65rem',
+                        fontWeight: 800,
+                        color: '#b45309',
+                        background: '#fef3c7',
+                        padding: '1px 8px',
+                        borderRadius: '999px',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Partial Paid
+                    </span>
+                  )}
+                </div>
+              ),
             STATUS: (
               Number(r.balanceAmount || 0) <= 0 ? (
                 <span
@@ -868,7 +912,8 @@ const BookingBook = ({ setActiveTab }) => {
                 )}
               </div>
             )
-          }))}
+          };
+        })}
           loading={loading}
           
         />

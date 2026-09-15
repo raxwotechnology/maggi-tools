@@ -3,7 +3,7 @@ import { toolAPI, bookingAPI, employeeAPI, clientAPI, accessoryAPI, accountAPI }
 import { Calendar, Package, MapPin, Hash, Info, User, Phone, Wallet, ShieldCheck, RefreshCw, TrendingUp, Plus, Trash2, FileText, Layers, Fuel, Users } from 'lucide-react';
 import Autocomplete from './Autocomplete';
 import '../styles/forms.css';
-import { calculateBookingCosts } from '../utils/bookingCalculations';
+import { calculateBookingCosts, distributeLumpSumPayment } from '../utils/bookingCalculations';
 import { toast } from '../utils/feedback';
 
 const BookingForm = ({ onSubmit, onCancel, initialData }) => {
@@ -23,9 +23,9 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
   const [customerHistory, setCustomerHistory] = useState(null);
   const [fetchingHistory, setFetchingHistory] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // ✅ NOTE: 'advancePayment' removed from MONEY_FIELDS sanitization list —
-  // it is no longer a manual input field, it's auto-computed from item/accessory Paid fields.
-  const MONEY_FIELDS = ['discount', 'transportCharge', 'fuelCharge', 'labourCharge', 'deposit'];
+  const [paymentMode, setPaymentMode] = useState('lumpSum'); // 'lumpSum' (overall amount) or 'itemByItem' (per tool)
+  
+  const MONEY_FIELDS = ['discount', 'transportCharge', 'fuelCharge', 'labourCharge', 'deposit', 'advancePayment'];
 
   const sanitizeMoneyFields = (data) => {
     const next = { ...data };
@@ -231,6 +231,45 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
     fetchAvailable();
   }, [formData.pickupDate, formData.returnDate, initialData]);
 
+  const lookupCustomerByNic = async (nicValue) => {
+    const nic = (nicValue || '').trim().toUpperCase();
+    if (!nic) return;
+
+    // 1. Instant local match from loaded clients
+    const localMatch = clients.find(c => (c.nic || '').trim().toUpperCase() === nic);
+    if (localMatch) {
+      setFormData(prev => ({
+        ...prev,
+        clientName: localMatch.name || prev.clientName,
+        clientPhone: localMatch.contact || prev.clientPhone,
+        customerIdFront: localMatch.customerIdFront || prev.customerIdFront,
+        customerIdBack: localMatch.customerIdBack || prev.customerIdBack
+      }));
+    }
+
+    // 2. Fetch from backend if >= 4 characters
+    if (nic.length >= 4) {
+      try {
+        const res = await bookingAPI.getCustomerHistory(nic);
+        if (res.data && res.data.details) {
+          const det = res.data.details;
+          setCustomerHistory(res.data.history || []);
+          setIsNewCustomer(false);
+          setFormData(prev => ({
+            ...prev,
+            clientNic: det.nic || nic,
+            clientName: det.name || prev.clientName,
+            clientPhone: det.phone || prev.clientPhone,
+            customerIdFront: det.customerIdFront || prev.customerIdFront,
+            customerIdBack: det.customerIdBack || prev.customerIdBack
+          }));
+        }
+      } catch (err) {
+        // Silently ignore if not found during live typing
+      }
+    }
+  };
+
   const handleCheckCustomer = async () => {
     const nic = (formData.clientNic || '').trim();
     if (!nic) return toast.warning('Please enter an ID / NIC to check.');
@@ -312,7 +351,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
   };
 
   useEffect(() => {
-    const calc = calculateBookingCosts(formData, totalDays);
+    const calc = calculateBookingCosts({ ...formData, paymentMode }, totalDays);
     setCosts({
       baseAmount: calc.baseAmount,
       totalAmount: calc.totalAmount,
@@ -322,17 +361,76 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
       soldItemsTotal: calc.soldItemsTotal,
       itemsPaid: calc.itemsPaid,
       accessoriesPaid: calc.accessoriesPaid,
-      soldItemsPaid: calc.soldItemsPaid
+      soldItemsPaid: calc.soldItemsPaid,
+      itemLevelPaid: calc.itemLevelPaid
     });
-    // ✅ Keep formData.advancePayment in sync with the computed paid total so
-    // anything else reading formData.advancePayment directly stays correct too.
-    setFormData(prev => (
-      prev.advancePayment === calc.advance
-        ? prev
-        : { ...prev, advancePayment: calc.advance }
-    ));
+    
+    // In itemByItem mode, keep formData.advancePayment equal to the sum of item paid amounts
+    if (paymentMode === 'itemByItem') {
+      setFormData(prev => (
+        prev.advancePayment === calc.advance
+          ? prev
+          : { ...prev, advancePayment: calc.advance }
+      ));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.items, formData.bookingAccessories, formData.soldItems, totalDays, formData.discount, formData.transportCharge, formData.fuelCharge, formData.labourCharge]);
+  }, [formData.items, formData.bookingAccessories, formData.soldItems, totalDays, formData.discount, formData.transportCharge, formData.fuelCharge, formData.labourCharge, formData.advancePayment, paymentMode]);
+
+  const handleLumpSumChange = (e) => {
+    const val = e.target.value === '' ? '' : Number(e.target.value);
+    const num = val === '' ? 0 : Number(val);
+    const distributed = distributeLumpSumPayment(
+      num,
+      formData.items,
+      formData.bookingAccessories,
+      formData.soldItems,
+      totalDays
+    );
+    setFormData(prev => ({
+      ...prev,
+      advancePayment: val,
+      items: distributed.items,
+      bookingAccessories: distributed.accessories,
+      soldItems: distributed.soldItems
+    }));
+  };
+
+  const handlePayFullAmount = () => {
+    const full = costs.totalAmount || 0;
+    const distributed = distributeLumpSumPayment(
+      full,
+      formData.items,
+      formData.bookingAccessories,
+      formData.soldItems,
+      totalDays
+    );
+    setFormData(prev => ({
+      ...prev,
+      advancePayment: full,
+      items: distributed.items,
+      bookingAccessories: distributed.accessories,
+      soldItems: distributed.soldItems
+    }));
+    toast.success(`Full bill amount of LKR ${full.toLocaleString()} applied!`);
+  };
+
+  const handleDistributePayment = () => {
+    const amt = Number(formData.advancePayment) || 0;
+    const distributed = distributeLumpSumPayment(
+      amt,
+      formData.items,
+      formData.bookingAccessories,
+      formData.soldItems,
+      totalDays
+    );
+    setFormData(prev => ({
+      ...prev,
+      items: distributed.items,
+      bookingAccessories: distributed.accessories,
+      soldItems: distributed.soldItems
+    }));
+    toast.info(`LKR ${amt.toLocaleString()} allocated across all tools.`);
+  };
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...formData.items];
@@ -408,11 +506,17 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
   };
 
   const handleToolSearchSelect = (val) => {
-    if (!val || !val.startsWith('[TOOL]')) return;
-    const match = val.match(/\[TOOL\] (.*?) -/);
-    if (!match?.[1]) return;
-    const found = availableTools.find((t) => t.number === match[1].trim());
+    if (!val) return;
+    let match = val.match(/\[TOOL\]\s*([^\s-]+)/i);
+    let toolNumber = match ? match[1].trim() : null;
+    let found = toolNumber ? availableTools.find((t) => t.number === toolNumber) : null;
+    if (!found) {
+      found = availableTools.find((t) => 
+        val.includes(t.number) || (t.model && val.toLowerCase().includes(t.model.toLowerCase()))
+      );
+    }
     if (found) addToolById(found);
+    setToolSearch('');
   };
 
   const removeItem = (index) => {
@@ -642,6 +746,12 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
                         setFormData(prev => ({ ...prev, clientNic: val }));
                         setCustomerHistory(null);
                         setIsNewCustomer(false);
+                        lookupCustomerByNic(val);
+                      }}
+                      onOptionSelect={selectedNic => {
+                        const val = (selectedNic || '').toUpperCase();
+                        setFormData(prev => ({ ...prev, clientNic: val }));
+                        lookupCustomerByNic(val);
                       }}
                       options={clients.map(c => c.nic).filter(Boolean)}
                       placeholder="Enter NIC..."
@@ -675,7 +785,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
                   onChange={e => {
                     const val = e.target.value;
                     setFormData(prev => ({ ...prev, clientName: val }));
-                    const found = clients.find(c => c.name.toLowerCase() === val.toLowerCase());
+                    const found = clients.find(c => c.name?.toLowerCase() === val.toLowerCase());
                     if (found) {
                       setFormData(prev => ({
                         ...prev,
@@ -686,7 +796,20 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
                       }));
                     }
                   }}
-                  options={clients.map(c => c.name)}
+                  onOptionSelect={selectedName => {
+                    const found = clients.find(c => c.name?.toLowerCase() === selectedName.toLowerCase());
+                    if (found) {
+                      setFormData(prev => ({
+                        ...prev,
+                        clientName: found.name,
+                        clientPhone: found.contact || prev.clientPhone,
+                        clientNic: found.nic || prev.clientNic,
+                        customerIdFront: found.customerIdFront || prev.customerIdFront,
+                        customerIdBack: found.customerIdBack || prev.customerIdBack
+                      }));
+                    }
+                  }}
+                  options={clients.map(c => c.name).filter(Boolean)}
                   placeholder="Type customer name to search..."
                 />
               </div>
@@ -702,6 +825,19 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
                     if (found) {
                       setFormData(prev => ({
                         ...prev,
+                        clientName: found.name || prev.clientName,
+                        clientNic: found.nic || prev.clientNic,
+                        customerIdFront: found.customerIdFront || prev.customerIdFront,
+                        customerIdBack: found.customerIdBack || prev.customerIdBack
+                      }));
+                    }
+                  }}
+                  onOptionSelect={selectedPhone => {
+                    const found = clients.find(c => c.contact === selectedPhone);
+                    if (found) {
+                      setFormData(prev => ({
+                        ...prev,
+                        clientPhone: found.contact,
                         clientName: found.name || prev.clientName,
                         clientNic: found.nic || prev.clientNic,
                         customerIdFront: found.customerIdFront || prev.customerIdFront,
@@ -783,8 +919,8 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
                   onChange={(e) => setToolSearch(e.target.value)}
                   options={availableTools
                     .filter((t) => t?.number)
-                    .map((t) => `[TOOL] ${t.number} - ${t.model || 'Tool'}`)}
-                  placeholder="Search and select tools"
+                    .map((t) => `[TOOL] ${t.number} - ${t.model || 'Tool'}${t.dailyRate ? ` (LKR ${Number(t.dailyRate).toLocaleString()}/day)` : ''} [Stock: ${t.stock || 1}]`)}
+                  placeholder="Search tools by ID or Name (e.g. T-001 or Drill)..."
                   className="full-width-autocomplete booking-tool-search"
                   emptyMessage="No tools loaded"
                 />
@@ -1419,24 +1555,103 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
               <Hash size={16} /> Pricing & Payment
             </p>
 
+            {/* Payment Mode Selector Tabs */}
+            <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '4px' }}>
+                Payment Method:
+              </span>
+              <button
+                type="button"
+                onClick={() => setPaymentMode('lumpSum')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: paymentMode === 'lumpSum' ? '1px solid var(--accent)' : '1px solid var(--border)',
+                  background: paymentMode === 'lumpSum' ? 'var(--accent)' : 'var(--bg-card)',
+                  color: paymentMode === 'lumpSum' ? '#ffffff' : 'var(--text-main)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: paymentMode === 'lumpSum' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <Wallet size={14} /> Pay Total Amount at once (Lump Sum)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMode('itemByItem')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: paymentMode === 'itemByItem' ? '1px solid var(--accent)' : '1px solid var(--border)',
+                  background: paymentMode === 'itemByItem' ? 'var(--accent)' : 'var(--bg-card)',
+                  color: paymentMode === 'itemByItem' ? '#ffffff' : 'var(--text-main)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: paymentMode === 'itemByItem' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <Layers size={14} /> Pay Tool by Tool (One by One)
+              </button>
+            </div>
+
             <div className="form-grid-2">
               <div className="form-group">
-                <label>
-                  Amount Paid (LKR){' '}
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                    (auto — sum of each tool/accessory/sold item "Paid" field below)
-                  </span>
-                </label>
-                {/* ✅ FIX: no longer a manual input. This is now a read-only
-                    display that always equals the sum of every tool item's
-                    and accessory's individual "Paid" amount. */}
-                <input
-                  type="text"
-                  value={`LKR ${((costs.itemsPaid || 0) + (costs.accessoriesPaid || 0) + (costs.soldItemsPaid || 0)).toLocaleString()}`}
-                  readOnly
-                  className="input-highlight-blue"
-                  style={{ fontWeight: 700 }}
-                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ marginBottom: 0 }}>
+                    Amount Paid (LKR){' '}
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                      {paymentMode === 'lumpSum' ? '(Overall advance for entire booking)' : '(Auto — sum of tool/accessory Paid fields below)'}
+                    </span>
+                  </label>
+                  {paymentMode === 'lumpSum' && (
+                    <button
+                      type="button"
+                      onClick={handlePayFullAmount}
+                      style={{
+                        background: 'var(--success-soft, #f0fdf4)',
+                        border: '1px solid var(--success)',
+                        color: 'var(--success)',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                      title="Set full bill amount as paid"
+                    >
+                      ✓ Pay Full (LKR {(costs.totalAmount || 0).toLocaleString()})
+                    </button>
+                  )}
+                </div>
+                {paymentMode === 'lumpSum' ? (
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={emptyNum(formData.advancePayment)}
+                    onChange={handleLumpSumChange}
+                    className="input-highlight-blue"
+                    style={{ fontWeight: 700, fontSize: '1.05rem' }}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={`LKR ${((costs.itemsPaid || 0) + (costs.accessoriesPaid || 0) + (costs.soldItemsPaid || 0)).toLocaleString()}`}
+                    readOnly
+                    className="input-highlight-blue"
+                    style={{ fontWeight: 700 }}
+                  />
+                )}
               </div>
 
               {/* ✅ Deposit */}

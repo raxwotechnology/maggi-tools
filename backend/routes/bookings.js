@@ -103,19 +103,22 @@ function calcBookingTotals(body) {
     const totalQty = Number(item.quantity) || 1;
     let returnedQty = 0;
     
-    if (item.returnDates && Array.isArray(item.returnDates)) {
+    if (item.returnDates && Array.isArray(item.returnDates) && item.returnDates.length > 0) {
       item.returnDates.forEach(rd => {
         const qty = Number(rd.quantity) || 0;
         returnedQty += qty;
         
-        const rdDate = new Date(rd.date);
-        rdDate.setHours(0,0,0,0);
-        const pickupDateObj = new Date(pickup);
-        pickupDateObj.setHours(0,0,0,0);
-        
-        let diffDays = Math.round((rdDate - pickupDateObj) / (1000 * 60 * 60 * 24));
-        if (diffDays <= 0) diffDays = 1; // Same day return = 1 day minimum
-        else diffDays += 1; // Align with totalDays calculation (inclusive of start day)
+        let diffDays = Number(rd.days);
+        if (!diffDays || isNaN(diffDays) || diffDays <= 0) {
+          const rdDate = new Date(rd.date);
+          rdDate.setHours(0,0,0,0);
+          const pickupDateObj = new Date(pickup);
+          pickupDateObj.setHours(0,0,0,0);
+          
+          diffDays = Math.round((rdDate - pickupDateObj) / (1000 * 60 * 60 * 24));
+          if (diffDays <= 0) diffDays = 1; // Same day return = 1 day minimum
+          else diffDays += 1; // Align with totalDays calculation (inclusive of start day)
+        }
         cost += rate * qty * diffDays;
       });
     }
@@ -124,7 +127,7 @@ function calcBookingTotals(body) {
     if (unreturned > 0) {
       // Use per-item rental days if set, otherwise fall back to booking-level totalDays
       let daysForUnreturned = (item.rentalDays && Number(item.rentalDays) > 0) ? Number(item.rentalDays) : totalDays;
-      if (body.actualReturnDate) {
+      if (body.actualReturnDate && !item.rentalDays) {
          const actDate = new Date(body.actualReturnDate);
          actDate.setHours(0,0,0,0);
          const pickupDateObj = new Date(pickup);
@@ -257,11 +260,63 @@ router.get('/insights', authMiddleware, async (req, res) => {
   }
 });
 
+async function findBookingForBill(rawToken) {
+  if (!rawToken) return null;
+  const token = String(rawToken).trim();
+  let bookingId = token;
+  try {
+    const res = verifyBillViewToken(token);
+    if (res?.bookingId) bookingId = res.bookingId;
+  } catch (_e) {
+    // fallback to raw token
+  }
+
+  let booking = null;
+
+  // 1. Search by bookingId ObjectId
+  if (bookingId && isValidObjectId(bookingId)) {
+    booking = await Booking.findById(bookingId).lean();
+  }
+
+  // 2. Search by raw token ObjectId
+  if (!booking && token !== bookingId && isValidObjectId(token)) {
+    booking = await Booking.findById(token).lean();
+  }
+
+  // 3. Search via Invoice model
+  if (!booking) {
+    const invQuery = [];
+    if (token) invQuery.push({ invoiceNo: token });
+    if (bookingId && bookingId !== token) invQuery.push({ invoiceNo: bookingId });
+    if (isValidObjectId(token)) invQuery.push({ _id: token });
+    if (isValidObjectId(bookingId)) invQuery.push({ _id: bookingId });
+
+    if (invQuery.length > 0) {
+      const inv = await Invoice.findOne({ $or: invQuery }).lean();
+      if (inv && inv.bookingId && isValidObjectId(inv.bookingId)) {
+        booking = await Booking.findById(inv.bookingId).lean();
+      }
+    }
+  }
+
+  // 4. Search by invoiceNo / bookingNumber in Booking collection
+  if (!booking) {
+    const bQuery = [];
+    if (token) bQuery.push({ invoiceNo: token }, { bookingNumber: token });
+    if (bookingId && bookingId !== token) bQuery.push({ invoiceNo: bookingId }, { bookingNumber: bookingId });
+
+    if (bQuery.length > 0) {
+      booking = await Booking.findOne({ $or: bQuery }).lean();
+    }
+  }
+
+  return booking;
+}
+
 // Public bill data (for Netlify frontend /bill/:token page)
 router.get('/bill/data/:token', async (req, res) => {
   try {
-    const { bookingId } = verifyBillViewToken(req.params.token);
-    let booking = await Booking.findById(bookingId).lean();
+    let booking = await findBookingForBill(req.params.token);
     if (!booking) return res.status(404).json({ message: 'Bill not found.' });
 
     booking = await enrichBookingForSms(booking);
@@ -279,15 +334,15 @@ router.get('/bill/data/:token', async (req, res) => {
       itemsBreakdown: buildItemsBreakdown(booking)
     });
   } catch (err) {
-    res.status(400).json({ message: 'This bill link is invalid or has expired.' });
+    console.error('Error fetching public bill data:', err);
+    res.status(500).json({ message: 'Error retrieving bill details.' });
   }
 });
 
 // Public bill view HTML fallback (direct API link)
 router.get('/bill/view/:token', async (req, res) => {
   try {
-    const { bookingId } = verifyBillViewToken(req.params.token);
-    let booking = await Booking.findById(bookingId).lean();
+    let booking = await findBookingForBill(req.params.token);
     if (!booking) return res.status(404).send('Bill not found.');
 
     booking = await enrichBookingForSms(booking);
@@ -300,9 +355,11 @@ router.get('/bill/view/:token', async (req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(renderBillViewHtml(booking, invoice, settings));
   } catch (err) {
-    res.status(400).send('This bill link is invalid or has expired.');
+    console.error('Error rendering public bill view:', err);
+    res.status(500).send('Error rendering bill.');
   }
 });
+
 
 // Get all bookings
 router.get('/', authMiddleware, async (req, res) => {
@@ -938,6 +995,129 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Return Single Item / Complete Single Tool
+router.put('/:id/return-single-item', authMiddleware, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+    const { itemId, returnDate, daysUsed, returnedQty, amountPaidNow, paymentMethod, accountId } = req.body;
+    const returnDateObj = new Date(returnDate || Date.now());
+    const actualDays = Math.max(1, Number(daysUsed) || 1);
+
+    let targetItem = null;
+    let isAccessory = false;
+
+    // Search in items
+    if (booking.items && booking.items.length > 0) {
+      targetItem = booking.items.find(it => String(it._id) === String(itemId) || String(it.tool) === String(itemId));
+    }
+
+    // Search in accessories if not found in items
+    if (!targetItem && booking.accessories && booking.accessories.length > 0) {
+      targetItem = booking.accessories.find(ac => String(ac._id) === String(itemId) || String(ac.accessory) === String(itemId));
+      if (targetItem) isAccessory = true;
+    }
+
+    if (!targetItem) {
+      return res.status(404).json({ message: 'Item not found in this booking' });
+    }
+
+    const pendingQty = Math.max(1, (targetItem.quantity || 1) - (targetItem.returnedQuantity || 0));
+    const qty = Math.min(pendingQty, Math.max(1, Number(returnedQty) || pendingQty));
+
+    targetItem.returnDates = targetItem.returnDates || [];
+    targetItem.returnDates.push({ quantity: qty, date: returnDateObj, days: actualDays });
+    targetItem.returnedQuantity = (targetItem.returnedQuantity || 0) + qty;
+    targetItem.rentalDays = actualDays;
+    targetItem.actualReturnDate = returnDateObj;
+    targetItem.returnStatus = 'Returned';
+
+    // Calculate overdue penalty if applicable
+    const expectedRet = targetItem.expectedReturnDate ? new Date(targetItem.expectedReturnDate) : new Date(booking.returnDate);
+    expectedRet.setHours(0, 0, 0, 0);
+    const actRet = new Date(returnDateObj);
+    actRet.setHours(0, 0, 0, 0);
+    if (actRet > expectedRet) {
+      const overdueDays = Math.ceil((actRet - expectedRet) / (1000 * 60 * 60 * 24));
+      const penaltyRate = Number(targetItem.overdueChargePerDay) || 500;
+      const penalty = overdueDays * penaltyRate * qty;
+      if (overdueDays > (targetItem.overdueDays || 0)) targetItem.overdueDays = overdueDays;
+      targetItem.totalOverdueCharge = (targetItem.totalOverdueCharge || 0) + penalty;
+      targetItem.returnStatus = 'Overdue';
+    }
+
+    // Restore stock in database immediately
+    if (!isAccessory) {
+      if (isValidObjectId(targetItem.tool)) {
+        const updatedTool = await Tool.findByIdAndUpdate(targetItem.tool, { $inc: { stock: qty } }, { new: true });
+        if (updatedTool && updatedTool.stock > 0 && updatedTool.status === 'Booked') {
+          await Tool.findByIdAndUpdate(targetItem.tool, { status: 'Available' });
+        }
+      }
+    } else {
+      if (isValidObjectId(targetItem.accessory)) {
+        const updatedAcc = await Accessory.findByIdAndUpdate(targetItem.accessory, { $inc: { stock: qty } }, { new: true });
+        if (updatedAcc) {
+          let status = 'In Stock';
+          if (updatedAcc.stock <= 0) status = 'Out of Stock';
+          else if (updatedAcc.stock < 5) status = 'Low Stock';
+          await Accessory.findByIdAndUpdate(targetItem.accessory, { status });
+        }
+      }
+    }
+
+    // Check if ALL items & accessories are fully returned
+    const allToolsReturned = (booking.items || []).every(it => (it.returnedQuantity || 0) >= (it.quantity || 1));
+    const allAccsReturned = (booking.accessories || []).every(ac => (ac.returnedQuantity || 0) >= (ac.quantity || 1));
+    if (allToolsReturned && allAccsReturned) {
+      booking.status = 'Returned';
+      booking.actualReturnDate = returnDateObj;
+    }
+
+    const previousAdvance = booking.advancePayment || 0;
+
+    // Optional payment received at return time
+    if (amountPaidNow && Number(amountPaidNow) > 0) {
+      const amt = Number(amountPaidNow);
+      booking.advancePayment = (booking.advancePayment || 0) + amt;
+      if (paymentMethod) booking.paymentMethod = paymentMethod;
+      if (accountId) booking.accountId = accountId;
+
+      if (paymentMethod === 'Bank Transfer' && accountId) {
+        await Account.findByIdAndUpdate(accountId, { $inc: { balance: amt } });
+      }
+    }
+
+    // Recalculate totals
+    const totals = calcBookingTotals(booking.toObject());
+    booking.baseAmount = totals.baseAmount;
+    booking.totalAmount = totals.totalAmount;
+    booking.balanceAmount = totals.balanceAmount;
+    booking.extraCharges = totals.extraCharges;
+    booking.updatedBy = req.user.id;
+    booking.updatedByName = req.user.name;
+
+    const savedBooking = await booking.save();
+
+    // Sync linked invoice, client ledger, payment record
+    await processBookingSideEffects(savedBooking.toObject(), {
+      oldStatus: booking.status,
+      previousAdvance
+    });
+
+    const itemName = targetItem.toolNumber ? `${targetItem.toolNumber} (${targetItem.model || ''})` : (targetItem.name || 'Item');
+    res.json({
+      success: true,
+      message: `${itemName} marked as returned (${actualDays} day${actualDays !== 1 ? 's' : ''} charged). Stock restored.`,
+      booking: savedBooking
+    });
+  } catch (err) {
+    console.error('Error returning single item:', err);
+    res.status(400).json({ message: err.message });
+  }
+});
+
 // Partial Return / Return
 router.put('/:id/partial-return', authMiddleware, async (req, res) => {
   try {
@@ -952,9 +1132,9 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
     // Process items
     if (booking.items && booking.items.length > 0) {
       for (const item of booking.items) {
-        const returnedData = (returnedItems || []).find(r => String(r.id) === String(item._id));
-        const rwopData = (returnedWithoutPayItems || []).find(r => String(r.id) === String(item._id));
-        const pnrData = (paidNotReturnedItems || []).find(r => String(r.id) === String(item._id));
+        const returnedData = (returnedItems || []).find(r => String(r.id) === String(item._id) || String(r.id) === String(item.tool));
+        const rwopData = (returnedWithoutPayItems || []).find(r => String(r.id) === String(item._id) || String(r.id) === String(item.tool));
+        const pnrData = (paidNotReturnedItems || []).find(r => String(r.id) === String(item._id) || String(r.id) === String(item.tool));
         
         const combinedData = pnrData || returnedData || rwopData;
         if (combinedData && combinedData.amountPaid !== undefined) {
@@ -968,9 +1148,13 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
         if (returnedData && returnedData.quantity > 0) {
           const qty = Number(returnedData.quantity);
           const itemDate = returnedData.date ? new Date(returnedData.date) : returnDateObj;
+          const itemDays = Number(returnedData.dayCount || returnedData.days) || undefined;
           item.returnDates = item.returnDates || [];
-          item.returnDates.push({ quantity: qty, date: itemDate });
+          item.returnDates.push({ quantity: qty, date: itemDate, days: itemDays });
           item.returnedQuantity = (item.returnedQuantity || 0) + qty;
+          if (itemDays) item.rentalDays = itemDays;
+          item.actualReturnDate = itemDate;
+          item.returnStatus = 'Returned';
           
           // Calculate and store overdue penalties
           const expectedRet = item.expectedReturnDate ? new Date(item.expectedReturnDate) : new Date(booking.returnDate);
@@ -1051,9 +1235,9 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
     // Process accessories
     if (booking.accessories && booking.accessories.length > 0) {
       for (const acc of booking.accessories) {
-        const returnedData = (returnedAccessories || []).find(r => String(r.id) === String(acc._id));
-        const rwopAccData = (returnedWithoutPayAccessories || []).find(r => String(r.id) === String(acc._id));
-        const pnrAccData = (paidNotReturnedAccessories || []).find(r => String(r.id) === String(acc._id));
+        const returnedData = (returnedAccessories || []).find(r => String(r.id) === String(acc._id) || String(r.id) === String(acc.accessory));
+        const rwopAccData = (returnedWithoutPayAccessories || []).find(r => String(r.id) === String(acc._id) || String(r.id) === String(acc.accessory));
+        const pnrAccData = (paidNotReturnedAccessories || []).find(r => String(r.id) === String(acc._id) || String(r.id) === String(acc.accessory));
         
         const combinedData = pnrAccData || returnedData || rwopAccData;
         if (combinedData && combinedData.amountPaid !== undefined) {
@@ -1067,9 +1251,13 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
         if (returnedData && returnedData.quantity > 0) {
           const qty = Number(returnedData.quantity);
           const accDate = returnedData.date ? new Date(returnedData.date) : returnDateObj;
+          const accDays = Number(returnedData.dayCount || returnedData.days) || undefined;
           acc.returnDates = acc.returnDates || [];
-          acc.returnDates.push({ quantity: qty, date: accDate });
+          acc.returnDates.push({ quantity: qty, date: accDate, days: accDays });
           acc.returnedQuantity = (acc.returnedQuantity || 0) + qty;
+          if (accDays) acc.rentalDays = accDays;
+          acc.actualReturnDate = accDate;
+          acc.returnStatus = 'Returned';
           
           // Calculate and store overdue penalties
           const expectedRet = acc.expectedReturnDate ? new Date(acc.expectedReturnDate) : new Date(booking.returnDate);

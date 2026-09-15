@@ -12,19 +12,22 @@ export function calculateBookingCosts(formData, totalDays = 1) {
     const totalQty = Number(item.quantity) || 1;
     let returnedQty = 0;
     
-    if (item.returnDates && Array.isArray(item.returnDates)) {
+    if (item.returnDates && Array.isArray(item.returnDates) && item.returnDates.length > 0) {
       item.returnDates.forEach(rd => {
         const qty = Number(rd.quantity) || 0;
         returnedQty += qty;
         
-        const rdDate = new Date(rd.date);
-        rdDate.setHours(0,0,0,0);
-        const pickupDateObj = new Date(pickup);
-        pickupDateObj.setHours(0,0,0,0);
-        
-        let diffDays = Math.round((rdDate - pickupDateObj) / (1000 * 60 * 60 * 24));
-        if (diffDays <= 0) diffDays = 1;
-        else diffDays += 1;
+        let diffDays = Number(rd.days);
+        if (!diffDays || isNaN(diffDays) || diffDays <= 0) {
+          const rdDate = new Date(rd.date);
+          rdDate.setHours(0,0,0,0);
+          const pickupDateObj = new Date(pickup);
+          pickupDateObj.setHours(0,0,0,0);
+          
+          diffDays = Math.round((rdDate - pickupDateObj) / (1000 * 60 * 60 * 24));
+          if (diffDays <= 0) diffDays = 1;
+          else diffDays += 1;
+        }
         cost += rate * qty * diffDays;
       });
     }
@@ -32,7 +35,7 @@ export function calculateBookingCosts(formData, totalDays = 1) {
     const unreturned = Math.max(0, totalQty - returnedQty);
     if (unreturned > 0) {
       let daysForUnreturned = (item.rentalDays && Number(item.rentalDays) > 0) ? Number(item.rentalDays) : days;
-      if (formData.actualReturnDate) {
+      if (formData.actualReturnDate && !item.rentalDays) {
          const actDate = new Date(formData.actualReturnDate);
          actDate.setHours(0,0,0,0);
          const pickupDateObj = new Date(pickup);
@@ -77,7 +80,11 @@ export function calculateBookingCosts(formData, totalDays = 1) {
   const fuel = Number(formData.fuelCharge) || 0;
   const labour = Number(formData.labourCharge) || 0;
   const discount = Number(formData.discount) || 0;
-  const advance = itemsPaid + accessoriesPaid + soldItemsPaid;
+
+  const itemLevelPaid = itemsPaid + accessoriesPaid + soldItemsPaid;
+  const directAdvance = Number(formData.advancePayment);
+  const isLumpSum = formData.paymentMode === 'lumpSum' || (itemLevelPaid === 0 && Number.isFinite(directAdvance) && directAdvance > 0);
+  const advance = isLumpSum ? (Number.isFinite(directAdvance) ? directAdvance : 0) : itemLevelPaid;
 
   const extraCharges = Number(formData.extraCharges) || 0;
   const subtotal = toolsTotal + accessoriesTotal + soldItemsTotal + transport + fuel + labour + extraCharges;
@@ -94,6 +101,7 @@ export function calculateBookingCosts(formData, totalDays = 1) {
     itemsPaid,
     accessoriesPaid,
     soldItemsPaid,
+    itemLevelPaid,
     subtotal,
     discount,
     advance: advance,
@@ -106,6 +114,68 @@ export function calculateBookingCosts(formData, totalDays = 1) {
     baseAmount: subtotal,
     totalAmount,
     balanceAmount
+  };
+}
+
+/**
+ * Distributes a lump sum amount across items, accessories, and sold items
+ */
+export function distributeLumpSumPayment(lumpSum, items = [], accessories = [], soldItems = [], totalDays = 1) {
+  let remainingToAllocate = Math.max(0, Number(lumpSum) || 0);
+  const days = Math.max(1, Number(totalDays) || 1);
+
+  // 1. Allocate to rental items
+  const newItems = (items || []).map((it) => {
+    const qty = Number(it.quantity) || 1;
+    const rate = Number(it.dailyRate) || 0;
+    const rDays = Number(it.rentalDays) || days;
+    const itemCost = rate * qty * rDays;
+    
+    const paidForThis = Math.min(itemCost, remainingToAllocate);
+    remainingToAllocate -= paidForThis;
+    return {
+      ...it,
+      amountPaid: paidForThis > 0 ? paidForThis : '',
+      amountDue: Math.max(0, itemCost - paidForThis)
+    };
+  });
+
+  // 2. Allocate to accessories
+  const newAccessories = (accessories || []).map((acc) => {
+    const qty = Number(acc.quantity) || 1;
+    const price = Number(acc.price) || 0;
+    const rDays = Number(acc.rentalDays) || days;
+    const accCost = price * qty * rDays;
+
+    const paidForThis = Math.min(accCost, remainingToAllocate);
+    remainingToAllocate -= paidForThis;
+    return {
+      ...acc,
+      amountPaid: paidForThis > 0 ? paidForThis : '',
+      amountDue: Math.max(0, accCost - paidForThis)
+    };
+  });
+
+  // 3. Allocate to sold items
+  const newSoldItems = (soldItems || []).map((sold) => {
+    const qty = Number(sold.quantity) || 1;
+    const price = Number(sold.price) || 0;
+    const soldCost = price * qty;
+
+    const paidForThis = Math.min(soldCost, remainingToAllocate);
+    remainingToAllocate -= paidForThis;
+    return {
+      ...sold,
+      amountPaid: paidForThis > 0 ? paidForThis : '',
+      amountDue: Math.max(0, soldCost - paidForThis)
+    };
+  });
+
+  return {
+    items: newItems,
+    accessories: newAccessories,
+    soldItems: newSoldItems,
+    leftover: remainingToAllocate
   };
 }
 

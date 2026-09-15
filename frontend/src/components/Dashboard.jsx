@@ -329,20 +329,32 @@ const Dashboard = ({ role = 'User', name = 'Guest', setActiveTab }) => {
       {isAdmin && (
         <div className="quick-actions-grid">
           <button className="pill-action-btn btn-blue" onClick={() => setActiveTab('bookings')}>
-            <div className="pill-icon-box"><Package size={24} /></div>
-            <div className="pill-text-box">New Rental</div>
+            <div className="pill-icon-box"><Package size={22} /></div>
+            <div className="pill-text-box">
+              <span className="pill-title">New Rental</span>
+              <span className="pill-subtitle">Create booking</span>
+            </div>
           </button>
           <button className="pill-action-btn btn-emerald" onClick={() => setActiveTab('tool-reg')}>
-            <div className="pill-icon-box"><Wrench size={24} /></div>
-            <div className="pill-text-box">Register Tool</div>
+            <div className="pill-icon-box"><Wrench size={22} /></div>
+            <div className="pill-text-box">
+              <span className="pill-title">Register Tool</span>
+              <span className="pill-subtitle">Add inventory</span>
+            </div>
           </button>
-          <button className="pill-action-btn btn-blue" onClick={() => setActiveTab('invoices')} style={{ borderLeft: '3px solid #6366F1' }}>
-            <div className="pill-icon-box" style={{ background: 'rgba(99,102,241,0.1)', color: '#6366F1' }}><FileText size={24} /></div>
-            <div className="pill-text-box">Billing Book</div>
+          <button className="pill-action-btn btn-indigo" onClick={() => setActiveTab('invoices')}>
+            <div className="pill-icon-box"><FileText size={22} /></div>
+            <div className="pill-text-box">
+              <span className="pill-title">Billing Book</span>
+              <span className="pill-subtitle">Invoices & payments</span>
+            </div>
           </button>
-          <button className="pill-action-btn btn-white" onClick={() => setActiveTab('reports')}>
-            <div className="pill-icon-box"><FileBarChart size={24} /></div>
-            <div className="pill-text-box">Financials</div>
+          <button className="pill-action-btn btn-amber" onClick={() => setActiveTab('reports')}>
+            <div className="pill-icon-box"><FileBarChart size={22} /></div>
+            <div className="pill-text-box">
+              <span className="pill-title">Financials</span>
+              <span className="pill-subtitle">P&L reports</span>
+            </div>
           </button>
         </div>
       )}
@@ -361,9 +373,9 @@ const Dashboard = ({ role = 'User', name = 'Guest', setActiveTab }) => {
       {isAdmin && (
         <div className="insights-row">
           <div className="insight-card">
-            <div className="section-header" style={{ marginBottom: '20px', background: 'transparent', padding: '0', borderBottom: 'none' }}>
+            <div className="section-header">
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Package size={20} style={{ color: 'var(--accent)' }} />
+                <Package size={20} style={{ color: 'var(--color-ops)' }} />
                 Most Rented Tools
               </h3>
             </div>
@@ -379,30 +391,30 @@ const Dashboard = ({ role = 'User', name = 'Guest', setActiveTab }) => {
                     <span className="insight-main-val">{fmt(v.revenue)}</span>
                   </div>
                 </div>
-              )) : <p className="insight-sub">No data available yet</p>}
+              )) : <p className="insight-sub" style={{ padding: '10px' }}>No tool usage data yet</p>}
             </div>
           </div>
 
           <div className="insight-card">
-            <div className="section-header" style={{ marginBottom: '20px', background: 'transparent', padding: '0', borderBottom: 'none' }}>
+            <div className="section-header">
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Users size={20} style={{ color: 'var(--success)' }} />
+                <Users size={20} style={{ color: 'var(--color-fin)' }} />
                 Top Customers
               </h3>
             </div>
             <div className="insight-list">
-              {insights.topCustomers.length > 0 ? insights.topCustomers.map((c, i) => (
+              {insights.topCustomers?.length > 0 ? insights.topCustomers.map((c, i) => (
                 <div key={i} className="insight-item">
-                  <div className="insight-rank" style={{ background: 'var(--success-soft)', color: 'var(--success)' }}>{i + 1}</div>
+                  <div className="insight-rank" style={{ background: 'var(--color-fin-soft)', color: 'var(--color-fin)' }}>{i + 1}</div>
                   <div className="insight-info">
                     <span className="insight-name">{c.name}</span>
-                    <span className="insight-sub">{c.count} Rentals · Recent: {c.latestTool}</span>
+                    <span className="insight-sub">{c.count} Rentals · Recent: {c.latestTool || 'Equipment'}</span>
                   </div>
                   <div className="insight-value">
-                    <span className="insight-main-val" style={{ color: 'var(--success)' }}>{fmt(c.revenue)}</span>
+                    <span className="insight-main-val" style={{ color: 'var(--color-fin)' }}>{fmt(c.revenue)}</span>
                   </div>
                 </div>
-              )) : <p className="insight-sub">No data available yet</p>}
+              )) : <p className="insight-sub" style={{ padding: '10px' }}>No customer data yet</p>}
             </div>
           </div>
         </div>
@@ -411,29 +423,34 @@ const Dashboard = ({ role = 'User', name = 'Guest', setActiveTab }) => {
       <div className="recent-activity">
         <div className="section-header">
           <h3>Recent Rental Activity</h3>
-          <button className="period-select" style={{ padding: '6px 12px', fontSize: '0.75rem' }} onClick={() => setActiveTab('bookings')}>View All</button>
+          <button className="period-select" onClick={() => setActiveTab('bookings')}>View All Bookings</button>
         </div>
         {recentActivity.length > 0 ? (
           <div className="activity-list">
-            {recentActivity.map((b, i) => (
-              <div key={i} className="activity-item" onClick={() => handleOpenDetail(b, 'booking')}>
-                <div className={`activity-indicator ${b.status === 'Returned' || b.status === 'Completed' ? 'green' : 'blue'}`} />
-                <div className="activity-details">
-                  <p>{b.clientName} · {b.tool?.number || 'No Tool'}</p>
-                  <span>{new Date(b.pickupDate).toLocaleDateString()} — {new Date(b.returnDate).toLocaleDateString()}</span>
+            {recentActivity.map((b, i) => {
+              const toolLabel = (b.items && b.items.length > 0)
+                ? b.items.map(it => it.tool?.name || it.tool?.number || it.toolName || it.name).filter(Boolean).join(', ')
+                : (b.tool?.number || b.tool?.name || b.toolName || 'Rental Items');
+              return (
+                <div key={i} className="activity-item" onClick={() => handleOpenDetail(b, 'booking')}>
+                  <div className={`activity-indicator ${b.status === 'Returned' || b.status === 'Completed' ? 'green' : 'blue'}`} />
+                  <div className="activity-details">
+                    <p>{b.clientName} · {toolLabel || 'Rental Order'}</p>
+                    <span>{new Date(b.pickupDate).toLocaleDateString()} — {new Date(b.returnDate).toLocaleDateString()}</span>
+                  </div>
+                  <div className="activity-value">
+                    {fmt(b.totalAmount)}
+                    <ChevronRight size={16} style={{ marginLeft: '12px', opacity: 0.4 }} />
+                  </div>
                 </div>
-                <div className="activity-value">
-                  {fmt(b.totalAmount)}
-                  <ChevronRight size={16} style={{ marginLeft: '12px', opacity: 0.3 }} />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
-          <div style={{ padding: '60px 40px', textAlign: 'center', color: 'var(--text-dim)', background: 'var(--bg-main)', margin: '20px', borderRadius: 'var(--r-md)', border: '1px solid var(--border-soft)' }}>
-            <Clock size={48} style={{ marginBottom: '16px', opacity: 0.15 }} />
-            <h4 style={{ color: 'var(--text-main)', marginBottom: '8px', fontWeight: 800 }}>No Activity Found</h4>
-            <p style={{ fontSize: '0.875rem' }}>
+          <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-dim)', background: 'var(--bg-main)', borderRadius: 'var(--r-md)', border: '1px solid var(--border-soft)' }}>
+            <Clock size={40} style={{ marginBottom: '12px', opacity: 0.25 }} />
+            <h4 style={{ color: 'var(--text-main)', marginBottom: '6px', fontWeight: 800 }}>No Activity Found</h4>
+            <p style={{ fontSize: '0.85rem' }}>
               No records found for the selected period.
             </p>
           </div>

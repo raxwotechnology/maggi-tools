@@ -90,22 +90,8 @@ const StockInventory = () => {
 
       {/* ── Filter Bar ── */}
       <div className="book-filters">
-        <div className="search-and-refresh" style={{ display: 'flex', gap: '8px', flex: 1 }}>
-            <div className="search-box-unified">
-          <Search className="search-icon" size={18} />
-          <input
-            type="text"
-            placeholder="Search by ID, Model or Category…"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
-        </div>
-            <button className="utility-icon-btn" onClick={fetchData} title="Refresh">
-            <RefreshCw size={18} className={loading ? 'spinner' : ''} />
-          </button>
-          </div>
-        <div className="filter-actions">
-          <div className="tab-switcher">
+        <div className="bf-top-row">
+          <div className="tab-switcher" style={{ margin: 0 }}>
             {['All', 'Available', 'Rented'].map(s => (
               <button
                 key={s}
@@ -116,7 +102,20 @@ const StockInventory = () => {
               </button>
             ))}
           </div>
-          
+          <div className="search-box-unified">
+            <Search className="search-icon" size={18} />
+            <input
+              type="text"
+              placeholder="Search by ID, Model or Category…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="bf-action-btns">
+            <button className="utility-icon-btn" onClick={fetchData} title="Refresh Data">
+              <RefreshCw size={18} className={loading ? 'spinner' : ''} />
+            </button>
+          </div>
         </div>
       </div>
 

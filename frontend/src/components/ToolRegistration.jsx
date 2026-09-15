@@ -6,10 +6,10 @@ import '../styles/books.css';
 const ToolRegistration = ({ onComplete }) => {
   return (
     <div className="book-container">
-      <div className="dashboard-header">
-        <div>
-          <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-muted)' }}>Admin Operations</p>
-          <h1>Register New Tool</h1>
+      <div className="book-header">
+        <div className="header-title">
+          <p className="book-subtitle" style={{ margin: 0 }}>Admin Operations</p>
+          <h2 className="book-title">Register New Tool</h2>
         </div>
       </div>
 

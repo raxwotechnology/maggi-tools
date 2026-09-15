@@ -1,340 +1,96 @@
-/* ═══════════════════════════════════════════
-   RAXWO BUTTONS — Premium v3 Mobile-First
-   ═══════════════════════════════════════════ */
+/* MAGGI TOOLS — Buttons v4 Professional */
 
-/* ── Base Reset ── */
-button {
-  font-family: inherit;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid transparent;
-  border-radius: var(--r-md);
-  font-weight: 700;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  white-space: nowrap;
-  outline: none;
-  font-size: 0.9rem;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
+button { font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; border:1px solid transparent; border-radius:var(--r-md); font-weight:700; transition:all 0.2s cubic-bezier(0.4,0,0.2,1); white-space:nowrap; outline:none; font-size:0.875rem; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+button svg { display:block!important; flex-shrink:0; width:17px!important; height:17px!important; min-width:17px!important; min-height:17px!important; stroke-width:2px; margin:0; }
+button:active { transform:scale(0.97)!important; }
 
-button svg {
-  display: block !important;
-  flex-shrink: 0;
-  width: 18px !important;
-  height: 18px !important;
-  min-width: 18px !important;
-  min-height: 18px !important;
-  stroke-width: 2px;
-  margin: 0;
-}
-
-button:active { transform: scale(0.96) !important; }
-
-/* ── Primary Action (Add/Submit) ── */
+/* Primary */
 .add-btn, .submit-btn, .refresh-btn {
-  height: 44px;
-  padding: 0 20px;
-  background: var(--accent-gradient);
-  color: #FFFFFF !important;
-  box-shadow: 0 4px 14px var(--accent-soft);
-  border: none;
-  border-radius: var(--r-md);
-  font-size: 0.875rem;
-  font-weight: 800;
+  height:42px; padding:0 18px;
+  background:var(--accent-gradient); color:#FFFFFF!important;
+  box-shadow:0 3px 10px var(--accent-glow); border:none;
+  border-radius:var(--r-md); font-size:0.875rem; font-weight:800;
 }
+.add-btn:hover, .submit-btn:hover, .refresh-btn:hover { filter:brightness(1.08); transform:translateY(-1px)!important; box-shadow:var(--shadow-accent); }
 
-.add-btn:hover, .submit-btn:hover, .refresh-btn:hover {
-  filter: brightness(1.1);
-  transform: translateY(-2px) !important;
-  box-shadow: var(--shadow-accent);
-}
-
-/* ── Secondary / Cancel ── */
+/* Secondary */
 .secondary-btn, .cancel-btn, .theme-toggle-btn {
-  height: 44px;
-  padding: 0 20px;
-  background: var(--bg-card);
-  color: var(--text-main);
-  border: 1.5px solid var(--border);
-  box-shadow: var(--shadow-sm);
+  height:42px; padding:0 18px;
+  background:var(--bg-card); color:var(--text-main);
+  border:1px solid var(--border); box-shadow:var(--shadow-xs);
+}
+.secondary-btn:hover, .cancel-btn:hover, .theme-toggle-btn:hover { background:var(--accent-soft); border-color:var(--accent-border); color:var(--accent); }
+
+/* Icon action buttons */
+.table-actions { display:flex; gap:5px; align-items:center; }
+.action-icon-btn { width:32px!important; height:32px!important; min-width:32px!important; border-radius:8px!important; padding:0!important; border:1px solid var(--border); background:var(--bg-card); transition:all 0.2s ease; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+.action-icon-btn svg { width:14px!important; height:14px!important; min-width:14px!important; stroke-width:2.2px; }
+.action-icon-btn:hover { transform:translateY(-1px)!important; box-shadow:var(--shadow-sm); z-index:2; }
+.action-icon-btn:active { transform:translateY(0) scale(0.95)!important; }
+
+@media (max-width:768px) { .action-icon-btn { width:36px!important; height:36px!important; min-width:36px!important; } .action-icon-btn svg { width:15px!important; height:15px!important; min-width:15px!important; } }
+
+/* Colored icon buttons */
+.btn-print   { background:rgba(37,99,235,0.07)!important;  color:#2563EB!important; border-color:rgba(37,99,235,0.15)!important; }
+.btn-print:hover   { background:#2563EB!important; color:#fff!important; box-shadow:0 4px 12px rgba(37,99,235,0.3)!important; }
+.btn-details { background:rgba(75,85,99,0.07)!important;   color:#4B5563!important; border-color:rgba(75,85,99,0.15)!important; }
+.btn-details:hover { background:#4B5563!important; color:#fff!important; box-shadow:0 4px 12px rgba(75,85,99,0.3)!important; }
+.btn-msg     { background:rgba(5,150,105,0.07)!important;  color:#059669!important; border-color:rgba(5,150,105,0.15)!important; }
+.btn-msg:hover     { background:#059669!important; color:#fff!important; box-shadow:0 4px 12px rgba(5,150,105,0.3)!important; }
+.btn-paid    { background:rgba(5,150,105,0.10)!important;  color:#047857!important; border-color:rgba(5,150,105,0.22)!important; }
+.btn-paid:hover    { background:#059669!important; color:#fff!important; box-shadow:0 4px 12px rgba(5,150,105,0.3)!important; }
+.btn-bell    { background:rgba(217,119,6,0.07)!important;  color:#D97706!important; border-color:rgba(217,119,6,0.15)!important; }
+.btn-bell:hover    { background:#D97706!important; color:#fff!important; box-shadow:0 4px 12px rgba(217,119,6,0.3)!important; }
+.btn-delete  { background:rgba(220,38,38,0.07)!important;  color:#DC2626!important; border-color:rgba(220,38,38,0.15)!important; }
+.btn-delete:hover  { background:#DC2626!important; color:#fff!important; box-shadow:0 4px 12px rgba(220,38,38,0.3)!important; }
+.btn-refresh { background:rgba(79,70,229,0.07)!important;  color:#4F46E5!important; border-color:rgba(79,70,229,0.15)!important; }
+.btn-refresh:hover { background:#4F46E5!important; color:#fff!important; box-shadow:0 4px 12px rgba(79,70,229,0.3)!important; }
+.btn-view    { background:rgba(8,145,178,0.08)!important;  color:#0891B2!important; border-color:rgba(8,145,178,0.18)!important; }
+.btn-view:hover    { background:#0891B2!important; color:#fff!important; box-shadow:0 4px 12px rgba(8,145,178,0.3)!important; }
+.btn-edit    { background:rgba(79,70,229,0.07)!important;  color:#4F46E5!important; border-color:rgba(79,70,229,0.15)!important; }
+.btn-edit:hover    { background:#4F46E5!important; color:#fff!important; box-shadow:0 4px 12px rgba(79,70,229,0.3)!important; }
+.btn-return  { background:rgba(5,150,105,0.08)!important;  color:#059669!important; border-color:rgba(5,150,105,0.18)!important; }
+.btn-return:hover  { background:#059669!important; color:#fff!important; box-shadow:0 4px 12px rgba(5,150,105,0.3)!important; }
+
+/* Booking record actions */
+.booking-record-actions { display:flex; flex-wrap:nowrap; align-items:center; gap:10px; max-width:100%; }
+.booking-btn-view { display:none; }
+.booking-btn-icon-row { display:grid; grid-template-columns:repeat(4,32px); gap:5px; justify-content:start; align-items:center; }
+
+@media (min-width:769px) {
+  .booking-btn-view { display:inline-flex; width:32px!important; height:32px!important; min-width:32px!important; padding:0!important; border-radius:8px!important; border:1px solid rgba(8,145,178,0.18)!important; background:rgba(8,145,178,0.08)!important; color:#0891b2!important; align-items:center; justify-content:center; }
+  .booking-btn-view span { display:none; }
+  .booking-btn-view svg { width:14px!important; height:14px!important; color:#0891b2!important; stroke:#0891b2!important; }
 }
 
-.secondary-btn:hover, .cancel-btn:hover, .theme-toggle-btn:hover {
-  background: var(--accent-soft);
-  border-color: var(--accent-border);
-  color: var(--accent);
+@media (max-width:768px) {
+  .booking-record-actions { flex-direction:column; align-items:stretch; gap:9px; width:100%; padding:2px 0; }
+  .booking-btn-view { display:flex!important; align-items:center; justify-content:center; gap:8px; width:100%!important; min-width:100%!important; height:46px!important; padding:0 16px!important; margin:0; border:none!important; border-radius:var(--r-md)!important; background:var(--accent-gradient)!important; color:#ffffff!important; font-size:0.9375rem; font-weight:800; box-shadow:0 3px 10px var(--accent-glow); cursor:pointer; -webkit-tap-highlight-color:transparent; flex-shrink:0; }
+  .booking-btn-view span { display:inline!important; color:#ffffff!important; font-weight:800; }
+  .booking-btn-view svg { width:18px!important; height:18px!important; min-width:18px!important; color:#ffffff!important; stroke:#ffffff!important; }
+  .booking-btn-icon-row { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; width:100%; }
+  .booking-btn-icon-row .action-icon-btn { width:100%!important; min-width:0!important; max-width:100%!important; height:40px!important; margin:0!important; padding:0!important; }
 }
 
-/* ── Table Action Buttons ── */
-.table-actions {
-  display: flex;
-  gap: 6px;
-  align-items: center;
+/* Generic action button */
+.action-btn { height:42px; padding:0 20px; border-radius:var(--r-md); font-weight:800; letter-spacing:0.01em; font-size:0.875rem; }
+.btn-primary { background:var(--accent-gradient); color:#fff!important; box-shadow:0 4px 12px var(--accent-glow); border:none; }
+.btn-primary:hover { filter:brightness(1.08); transform:translateY(-1px)!important; box-shadow:var(--shadow-accent); }
+
+/* Modal actions */
+.modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:22px; padding-top:18px; border-top:1px solid var(--border); }
+
+@media (max-width:640px) {
+  .add-btn,.submit-btn,.secondary-btn,.cancel-btn,.action-btn { height:46px; padding:0 16px; font-size:0.9rem; }
+  .modal-actions { flex-direction:column-reverse; gap:9px; }
+  .modal-actions button { width:100%; justify-content:center; }
 }
 
-.action-icon-btn {
-  width: 34px !important;
-  height: 34px !important;
-  min-width: 34px !important;
-  border-radius: 10px !important;
-  padding: 0 !important;
-  border: 1.5px solid var(--border-soft);
-  background: var(--bg-card);
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  -webkit-tap-highlight-color: transparent;
-}
+/* Cancel */
+.cancel-btn { background:transparent; border-color:var(--border); color:var(--text-muted); }
+.cancel-btn:hover { background:var(--bg-hover); border-color:var(--border); color:var(--text-main); }
 
-.action-icon-btn svg {
-  width: 15px !important;
-  height: 15px !important;
-  min-width: 15px !important;
-  stroke-width: 2.2px;
-  transition: all 0.2s ease;
-}
-
-.action-icon-btn:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: var(--shadow-sm);
-  z-index: 2;
-}
-
-.action-icon-btn:active {
-  transform: translateY(0) scale(0.94) !important;
-}
-
-/* ── Mobile: larger tap targets ── */
-@media (max-width: 768px) {
-  .action-icon-btn {
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
-  }
-  .action-icon-btn svg {
-    width: 16px !important;
-    height: 16px !important;
-    min-width: 16px !important;
-  }
-}
-
-/* Premium Translucent Palettes */
-.btn-print   { background: rgba(99,102,241,0.07) !important; color: #6366F1 !important; border-color: rgba(99,102,241,0.15) !important; }
-.btn-print:hover { background: #6366F1 !important; color: #fff !important; box-shadow: 0 5px 14px rgba(99,102,241,0.3) !important; }
-
-.btn-details { background: rgba(75,85,99,0.07) !important; color: #4B5563 !important; border-color: rgba(75,85,99,0.15) !important; }
-.btn-details:hover { background: #4B5563 !important; color: #fff !important; box-shadow: 0 5px 14px rgba(75,85,99,0.3) !important; }
-
-.btn-msg     { background: rgba(16,185,129,0.07) !important; color: #10B981 !important; border-color: rgba(16,185,129,0.15) !important; }
-.btn-msg:hover { background: #10B981 !important; color: #fff !important; box-shadow: 0 5px 14px rgba(16,185,129,0.3) !important; }
-
-.btn-paid    { background: rgba(16,185,129,0.12) !important; color: #059669 !important; border-color: rgba(16,185,129,0.25) !important; }
-.btn-paid:hover { background: #10B981 !important; color: #fff !important; box-shadow: 0 5px 14px rgba(16,185,129,0.3) !important; }
-
-.btn-bell    { background: rgba(245,158,11,0.07) !important; color: #F59E0B !important; border-color: rgba(245,158,11,0.15) !important; }
-.btn-bell:hover { background: #F59E0B !important; color: #fff !important; box-shadow: 0 5px 14px rgba(245,158,11,0.3) !important; }
-
-.btn-delete  { background: rgba(239,68,68,0.07) !important; color: #EF4444 !important; border-color: rgba(239,68,68,0.15) !important; }
-.btn-delete:hover { background: #EF4444 !important; color: #fff !important; box-shadow: 0 5px 14px rgba(239,68,68,0.3) !important; }
-
-.btn-refresh { background: rgba(139,92,246,0.07) !important; color: #8B5CF6 !important; border-color: rgba(139,92,246,0.15) !important; }
-.btn-refresh:hover { background: #8B5CF6 !important; color: #fff !important; box-shadow: 0 5px 14px rgba(139,92,246,0.3) !important; }
-
-.btn-view { background: rgba(14,165,233,0.1) !important; color: #0EA5E9 !important; border-color: rgba(14,165,233,0.2) !important; }
-.btn-view:hover { background: #0EA5E9 !important; color: #fff !important; box-shadow: 0 5px 14px rgba(14,165,233,0.3) !important; }
-
-.btn-edit { background: rgba(99,102,241,0.08) !important; color: #6366F1 !important; border-color: rgba(99,102,241,0.18) !important; }
-.btn-edit:hover { background: #6366F1 !important; color: #fff !important; }
-
-.btn-return { background: rgba(16,185,129,0.1) !important; color: #10B981 !important; border-color: rgba(16,185,129,0.2) !important; }
-.btn-return:hover { background: #10B981 !important; color: #fff !important; }
-
-/* Booking records — desktop: inline; mobile: stacked (see books.css + below) */
-.booking-record-actions {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 12px;
-  max-width: 100%;
-}
-
-.booking-btn-view {
-  display: none;
-}
-
-.booking-btn-icon-row {
-  display: grid;
-  grid-template-columns: repeat(4, 34px);
-  gap: 6px;
-  justify-content: start;
-  align-items: center;
-}
-
-/* Desktop: show View as icon in the row */
-@media (min-width: 769px) {
-  .booking-btn-view {
-    display: inline-flex;
-    width: 34px !important;
-    height: 34px !important;
-    min-width: 34px !important;
-    padding: 0 !important;
-    border-radius: 10px !important;
-    border: 1.5px solid rgba(14, 165, 233, 0.2) !important;
-    background: rgba(14, 165, 233, 0.1) !important;
-    color: #0ea5e9 !important;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .booking-btn-view span {
-    display: none;
-  }
-
-  .booking-btn-view svg {
-    width: 16px !important;
-    height: 16px !important;
-    color: #0ea5e9 !important;
-    stroke: #0ea5e9 !important;
-  }
-}
-
-@media (max-width: 768px) {
-  .booking-record-actions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-    width: 100%;
-    padding: 2px 0;
-  }
-
-  .booking-btn-view {
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100% !important;
-    min-width: 100% !important;
-    height: 48px !important;
-    padding: 0 16px !important;
-    margin: 0;
-    border: none !important;
-    border-radius: 12px !important;
-    background: #4f46e5 !important;
-    color: #ffffff !important;
-    font-size: 0.9375rem;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    flex-shrink: 0;
-    position: relative;
-    z-index: 2;
-  }
-
-  .booking-btn-view span {
-    display: inline !important;
-    color: #ffffff !important;
-    font-weight: 800;
-  }
-
-  .booking-btn-view svg {
-    width: 20px !important;
-    height: 20px !important;
-    min-width: 20px !important;
-    color: #ffffff !important;
-    stroke: #ffffff !important;
-  }
-
-  .booking-btn-icon-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    width: 100%;
-  }
-
-  .booking-btn-icon-row .action-icon-btn {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    height: 42px !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    flex-shrink: 1;
-  }
-
-  .booking-btn-icon-row .action-icon-btn svg {
-    width: 17px !important;
-    height: 17px !important;
-  }
-}
-
-/* ── Action button (generic) ── */
-.action-btn {
-  height: 44px;
-  padding: 0 22px;
-  border-radius: var(--r-md);
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  font-size: 0.875rem;
-}
-
-.btn-primary {
-  background: var(--accent-gradient);
-  color: #fff !important;
-  box-shadow: 0 5px 14px var(--accent-soft);
-  border: none;
-}
-
-.btn-primary:hover {
-  filter: brightness(1.1);
-  transform: translateY(-2px) !important;
-  box-shadow: var(--shadow-accent);
-}
-
-/* ── Form Footer Actions ── */
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
-}
-
-/* ── Mobile scaling ── */
-@media (max-width: 640px) {
-  .add-btn, .submit-btn, .secondary-btn, .cancel-btn, .action-btn {
-    height: 48px;
-    padding: 0 18px;
-    font-size: 0.9rem;
-    border-radius: var(--r-md);
-  }
-  .modal-actions {
-    flex-direction: column-reverse;
-    gap: 10px;
-  }
-  .modal-actions button { width: 100%; justify-content: center; }
-}
-
-/* ── Cancel ── */
-.cancel-btn {
-  background: transparent;
-  border-color: var(--border);
-  color: var(--text-muted);
-}
-.cancel-btn:hover {
-  background: var(--bg-card);
-  border-color: var(--border);
-  color: var(--text-main);
-}
-
-/* ── Glow effect ── */
-.btn-glow { transition: all 0.2s ease !important; }
-.btn-glow:hover { filter: brightness(1.08); box-shadow: var(--shadow-accent) !important; transform: translateY(-2px) !important; }
-.btn-glow:active { transform: translateY(0) !important; }
+/* Glow */
+.btn-glow { transition:all 0.2s ease!important; }
+.btn-glow:hover { filter:brightness(1.06); box-shadow:var(--shadow-accent)!important; transform:translateY(-1px)!important; }
+.btn-glow:active { transform:translateY(0)!important; }

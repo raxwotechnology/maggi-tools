@@ -142,13 +142,13 @@ const SalaryBook = () => {
 
   return (
     <div className="book-container">
-            <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
-        <div>
-          <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-muted)' }}>Payroll &amp; Wages</p>
-          <h1 style={{ margin: 0 }}>Staff Salary Book</h1>
+      <div className="book-header">
+        <div className="header-title">
+          <p className="book-subtitle" style={{ margin: 0 }}>Payroll &amp; Wages</p>
+          <h2 className="book-title">Staff Salary Book</h2>
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap' }}>
+        <div className="book-header-actions">
           <div className="search-box" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0 12px', height: '44px', background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: 'var(--r-md)', minWidth: '0' }}>
             <Calendar size={18} className="search-icon" style={{ color: 'var(--text-dim)', flexShrink: 0 }} />
             <select value={currentMonth} onChange={e => setTargetMonth(`${e.target.value} ${currentYear}`)} style={{ border: 'none', background: 'none', fontWeight: 700, cursor: 'pointer', color: 'var(--text-main)', fontSize: '0.9rem', outline: 'none', minWidth: '0' }}>

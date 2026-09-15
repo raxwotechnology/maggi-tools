@@ -82,14 +82,16 @@ const Accounts = () => {
 
   return (
     <div className="book-container">
-      <div className="dashboard-header">
-        <div>
-          <p className="form-text-dim" style={{ margin: 0 }}>Financial Management</p>
-          <h1>Bank Accounts</h1>
+      <div className="book-header">
+        <div className="header-title">
+          <p className="book-subtitle" style={{ margin: 0 }}>Financial Management</p>
+          <h2 className="book-title">Bank Accounts</h2>
         </div>
-        <button className="add-btn" onClick={() => { setEditingId(null); setFormData({ accountName: '', bankName: '', accountNumber: '', branch: '', balance: 0 }); setIsModalOpen(true); }}>
-          <PlusCircle size={18} /> Add Account
-        </button>
+        <div className="book-header-actions">
+          <button className="add-btn" onClick={() => { setEditingId(null); setFormData({ accountName: '', bankName: '', accountNumber: '', branch: '', balance: 0 }); setIsModalOpen(true); }}>
+            <PlusCircle size={18} /> Add Account
+          </button>
+        </div>
       </div>
 
       <div className="book-summary">

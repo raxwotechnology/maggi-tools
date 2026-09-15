@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Download, ShieldCheck, User, Calendar, Package, MapPin, Phone, Mail, Printer, CheckCircle, Eye } from 'lucide-react';
+import { Download, ShieldCheck, User, Calendar, Package, MapPin, Phone, Mail, Printer, CheckCircle, Eye, RefreshCw, AlertTriangle, Clock, ArrowRight, RotateCcw, Send, MessageSquare, Copy, ExternalLink, Link as LinkIcon } from 'lucide-react';
 import { generateInvoicePDF, generateQuotationPDF } from '../utils/billingGenerator';
 import api, { bookingAPI } from '../services/api';
+import Modal from './Modal';
+import { toast } from '../utils/feedback';
 import logoUrl from '../logo.png';
 import './RecordDetails.css';
 
@@ -387,9 +389,84 @@ const QuotationDocumentView = ({ data }) => {
   );
 };
 
-const RecordDetails = ({ data, type }) => {
-  const [history, setHistory] = React.useState([]);
-  const [loadingHistory, setLoadingHistory] = React.useState(false);
+const RecordDetails = ({ data: initialData, type, onDataChange }) => {
+  const [data, setData] = useState(initialData);
+  const [history, setHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [accounts, setAccounts] = useState([]);
+
+  // Return single item modal state
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [selectedReturnItem, setSelectedReturnItem] = useState(null);
+  const [isAccessoryReturn, setIsAccessoryReturn] = useState(false);
+  const [returnDate, setReturnDate] = useState(new Date().toISOString().split('T')[0]);
+  const [daysUsed, setDaysUsed] = useState(1);
+  const [returnedQty, setReturnedQty] = useState(1);
+  const [amountPaidNow, setAmountPaidNow] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [accountId, setAccountId] = useState('');
+  const [submittingReturn, setSubmittingReturn] = useState(false);
+  const [sendingSms, setSendingSms] = useState(false);
+
+  const handleSendReminderSms = async () => {
+    const bookingId = data?._id || data?.bookingId;
+    if (!bookingId) {
+      toast.error('Booking ID not found');
+      return;
+    }
+    if (!data?.clientPhone) {
+      toast.warning('No phone number found for this customer');
+      return;
+    }
+    setSendingSms(true);
+    try {
+      await bookingAPI.sendReminder(bookingId);
+      toast.success(`Reminder SMS with bill link sent to ${data.clientPhone}!`);
+    } catch (err) {
+      console.error('Failed to send reminder SMS:', err);
+      toast.error(err.response?.data?.message || 'Failed to send SMS');
+    } finally {
+      setSendingSms(false);
+    }
+  };
+
+  const handleCopyBillLink = () => {
+    const bookingId = data?._id || data?.bookingId;
+    if (!bookingId) return toast.error('Booking ID not found');
+    const billUrl = `${window.location.origin}/bill/${bookingId}`;
+    navigator.clipboard.writeText(billUrl);
+    toast.success('Public bill link copied to clipboard!');
+  };
+
+  const handleWhatsAppShare = () => {
+    const bookingId = data?._id || data?.bookingId;
+    const phone = (data?.clientPhone || '').replace(/[^0-9]/g, '');
+    if (!phone) return toast.warning('No phone number found for this customer');
+    const billUrl = `${window.location.origin}/bill/${bookingId}`;
+    const total = Number(data.totalAmount || 0).toLocaleString();
+    const paid = Number(data.advancePayment || 0).toLocaleString();
+    const bal = Number(data.balanceAmount || 0).toLocaleString();
+    const msg = encodeURIComponent(
+      `Hello ${data.clientName || 'Customer'},\nHere is your rental bill from MAGGI TOOLS:\nTotal: LKR ${total}\nPaid: LKR ${paid}\nBalance Due: LKR ${bal}\n\nView Bill Details online:\n${billUrl}\n\nThank you!`
+    );
+    window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+  };
+
+  useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
+
+  useEffect(() => {
+    const fetchAccs = async () => {
+      try {
+        const res = await api.get('accounts');
+        setAccounts(res.data || []);
+      } catch (err) {
+        console.warn('Failed to load accounts', err);
+      }
+    };
+    fetchAccs();
+  }, []);
 
   const loadClientHistory = async () => {
     setLoadingHistory(true);
@@ -405,11 +482,91 @@ const RecordDetails = ({ data, type }) => {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (type === 'client' && data?.name) {
       loadClientHistory();
     }
   }, [data, type]);
+
+  const handleOpenReturnItem = (item, isAcc = false) => {
+    const pendingQty = Math.max(1, (item.quantity || 1) - (item.returnedQuantity || 0));
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // Auto calculate days from pickup date to today
+    let calculatedDays = 1;
+    if (data?.pickupDate) {
+      const p = new Date(data.pickupDate);
+      p.setHours(0, 0, 0, 0);
+      const t = new Date(todayStr);
+      t.setHours(0, 0, 0, 0);
+      const diff = Math.round((t - p) / (1000 * 60 * 60 * 24));
+      calculatedDays = diff <= 0 ? 1 : diff + 1;
+    } else {
+      calculatedDays = Number(item.rentalDays) || Number(data?.totalDays) || 1;
+    }
+
+    setSelectedReturnItem(item);
+    setIsAccessoryReturn(isAcc);
+    setReturnDate(todayStr);
+    setDaysUsed(calculatedDays);
+    setReturnedQty(pendingQty);
+    setAmountPaidNow('');
+    setPaymentMethod('Cash');
+    setAccountId('');
+    setReturnModalOpen(true);
+  };
+
+  const handleReturnDateChange = (newDateStr) => {
+    setReturnDate(newDateStr);
+    if (data?.pickupDate && newDateStr) {
+      const p = new Date(data.pickupDate);
+      p.setHours(0, 0, 0, 0);
+      const t = new Date(newDateStr);
+      t.setHours(0, 0, 0, 0);
+      const diff = Math.round((t - p) / (1000 * 60 * 60 * 24));
+      const autoDays = diff <= 0 ? 1 : diff + 1;
+      setDaysUsed(autoDays);
+    }
+  };
+
+  const handleConfirmSingleReturn = async (e) => {
+    e.preventDefault();
+    if (!selectedReturnItem) return;
+
+    const bookingId = data?._id || data?.bookingId;
+    if (!bookingId) {
+      toast.error('Booking record ID not found.');
+      return;
+    }
+
+    setSubmittingReturn(true);
+    try {
+      const itemId = selectedReturnItem._id || selectedReturnItem.tool || selectedReturnItem.accessory;
+      const res = await bookingAPI.returnSingleItem(bookingId, {
+        itemId,
+        returnDate,
+        daysUsed: Number(daysUsed) || 1,
+        returnedQty: Number(returnedQty) || 1,
+        amountPaidNow: amountPaidNow !== '' ? Number(amountPaidNow) : 0,
+        paymentMethod,
+        accountId: accountId || undefined
+      });
+
+      toast.success(res.data.message || 'Tool marked as returned and stock restored!');
+      if (res.data.booking) {
+        setData(res.data.booking);
+        if (onDataChange) onDataChange(res.data.booking);
+      }
+      setReturnModalOpen(false);
+      window.dispatchEvent(new Event('raxwo_data_updated'));
+    } catch (err) {
+      console.error('Failed to return item:', err);
+      const msg = err.response?.data?.message || 'Failed to process return.';
+      toast.error(msg);
+    } finally {
+      setSubmittingReturn(false);
+    }
+  };
 
   if (!data) return null;
 
@@ -841,13 +998,25 @@ const RecordDetails = ({ data, type }) => {
                   </div>
                 </div>
                 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-side)', padding: '12px 16px', borderRadius: '10px', fontSize: '0.85rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-side)', padding: '12px 16px', borderRadius: '10px', fontSize: '0.85rem', flexWrap: 'wrap', gap: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)' }}></span>
                     <strong style={{ color: 'var(--text-muted)' }}>Expected Return:</strong> 
                     <span style={{ fontWeight: 800, color: 'var(--text-main)' }}>{expRet.toLocaleDateString()}</span>
                   </div>
-                  {it.overdueDays > 0 && <div style={{ color: 'var(--danger)', fontWeight: 800, background: '#fee2e2', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem' }}>+ LKR {(it.totalOverdueCharge || 0).toLocaleString()} Late Fee</div>}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {it.overdueDays > 0 && <div style={{ color: 'var(--danger)', fontWeight: 800, background: '#fee2e2', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem' }}>+ LKR {(it.totalOverdueCharge || 0).toLocaleString()} Late Fee</div>}
+                    {(it.returnedQuantity || 0) < (it.quantity || 1) && data?.status !== 'Returned' && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenReturnItem(it, false)}
+                        className="btn-complete-tool"
+                        title="Return this tool early or update actual days"
+                      >
+                        <CheckCircle size={15} /> Complete / Return Tool
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )
@@ -925,13 +1094,25 @@ const RecordDetails = ({ data, type }) => {
                 </div>
               </div>
               
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-side)', padding: '12px 16px', borderRadius: '10px', fontSize: '0.85rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-side)', padding: '12px 16px', borderRadius: '10px', fontSize: '0.85rem', flexWrap: 'wrap', gap: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)' }}></span>
                   <strong style={{ color: 'var(--text-muted)' }}>Expected Return:</strong> 
                   <span style={{ fontWeight: 800, color: 'var(--text-main)' }}>{expRet.toLocaleDateString()}</span>
                 </div>
-                {a.overdueDays > 0 && <div style={{ color: 'var(--danger)', fontWeight: 800, background: '#fee2e2', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem' }}>+ LKR {(a.totalOverdueCharge || 0).toLocaleString()} Late Fee</div>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {a.overdueDays > 0 && <div style={{ color: 'var(--danger)', fontWeight: 800, background: '#fee2e2', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem' }}>+ LKR {(a.totalOverdueCharge || 0).toLocaleString()} Late Fee</div>}
+                  {(a.returnedQuantity || 0) < (a.quantity || 1) && data?.status !== 'Returned' && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenReturnItem(a, true)}
+                      className="btn-complete-tool"
+                      title="Return this accessory"
+                    >
+                      <CheckCircle size={15} /> Complete / Return Part
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )
@@ -1029,20 +1210,67 @@ const RecordDetails = ({ data, type }) => {
 
   return (
     <div className="details-overlay">
-      {(type === 'invoice' || type === 'quotation') && (
-        <div className="detail-actions-header" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+      {type === 'booking' && (
+        <div className="detail-actions-header">
           <button
-            className="download-pdf-btn"
-            onClick={() => type === 'invoice' ? generateInvoicePDF(data) : generateQuotationPDF(data)}
+            type="button"
+            className="rd-action-btn rd-btn-sms"
+            onClick={handleSendReminderSms}
+            disabled={sendingSms}
+            title="Send SMS bill reminder directly to customer's phone"
           >
-            <Download size={18} /> <span>Download Professional PDF</span>
+            {sendingSms ? <RefreshCw size={15} className="spinner" /> : <Send size={15} />}
+            <span>{sendingSms ? 'Sending SMS...' : 'Send SMS Reminder'}</span>
           </button>
           <button
-            className="download-pdf-btn"
-            style={{ background: '#3b82f6', color: '#ffffff' }}
+            type="button"
+            className="rd-action-btn rd-btn-whatsapp"
+            onClick={handleWhatsAppShare}
+            title="Send bill details and view link via WhatsApp"
+          >
+            <MessageSquare size={15} /> <span>WhatsApp Bill</span>
+          </button>
+          <button
+            type="button"
+            className="rd-action-btn rd-btn-link"
+            onClick={handleCopyBillLink}
+            title="Copy customer online bill view link to clipboard"
+          >
+            <Copy size={15} /> <span>Copy Bill Link</span>
+          </button>
+          <button
+            type="button"
+            className="rd-action-btn rd-btn-pdf"
+            onClick={() => generateInvoicePDF(data)}
+            title="Download PDF Invoice"
+          >
+            <Download size={15} /> <span>Download PDF</span>
+          </button>
+          <button
+            type="button"
+            className="rd-action-btn rd-btn-print"
+            onClick={() => generateInvoicePDF(data, 'print')}
+            title="Print Invoice"
+          >
+            <Printer size={15} /> <span>Print</span>
+          </button>
+        </div>
+      )}
+      {(type === 'invoice' || type === 'quotation') && (
+        <div className="detail-actions-header">
+          <button
+            type="button"
+            className="rd-action-btn rd-btn-pdf"
+            onClick={() => type === 'invoice' ? generateInvoicePDF(data) : generateQuotationPDF(data)}
+          >
+            <Download size={16} /> <span>Download Professional PDF</span>
+          </button>
+          <button
+            type="button"
+            className="rd-action-btn rd-btn-print"
             onClick={() => type === 'invoice' ? generateInvoicePDF(data, 'print') : generateQuotationPDF(data, 'print')}
           >
-            <Printer size={18} /> <span>Print Document</span>
+            <Printer size={16} /> <span>Print Document</span>
           </button>
         </div>
       )}
@@ -1149,6 +1377,198 @@ const RecordDetails = ({ data, type }) => {
           </div>
         </div>
       </div>
+
+      {/* Return Single Tool / Item Modal */}
+      {returnModalOpen && selectedReturnItem && (
+        <Modal
+          isOpen={returnModalOpen}
+          onClose={() => setReturnModalOpen(false)}
+          title={`Return / Complete ${isAccessoryReturn ? 'Part' : 'Tool'}: ${selectedReturnItem.toolNumber || ''} - ${selectedReturnItem.model || selectedReturnItem.name || ''}`}
+        >
+          <form onSubmit={handleConfirmSingleReturn} className="return-tool-dialog">
+            <div className="return-tool-header-card">
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Item Details</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--accent)' }}>
+                  {selectedReturnItem.toolNumber ? `[${selectedReturnItem.toolNumber}] ` : ''}{selectedReturnItem.model || selectedReturnItem.name}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Daily Rate</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--success)' }}>
+                  LKR {Number(selectedReturnItem.dailyRate || selectedReturnItem.price || 0).toLocaleString()} / day
+                </div>
+              </div>
+            </div>
+
+            <div className="form-grid-2">
+              <div className="form-group">
+                <label>Actual Return Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={returnDate}
+                  onChange={(e) => handleReturnDateChange(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Actual Days Used *</label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={daysUsed}
+                  onChange={(e) => setDaysUsed(Math.max(1, Number(e.target.value)))}
+                />
+                <small style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Originally booked for {selectedReturnItem.rentalDays || data.totalDays || 1} days.
+                </small>
+              </div>
+            </div>
+
+            {(selectedReturnItem.quantity || 1) > 1 && (
+              <div className="form-group">
+                <label>Quantity Returning ({Math.max(1, (selectedReturnItem.quantity || 1) - (selectedReturnItem.returnedQuantity || 0))} pending)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={Math.max(1, (selectedReturnItem.quantity || 1) - (selectedReturnItem.returnedQuantity || 0))}
+                  value={returnedQty}
+                  onChange={(e) => setReturnedQty(Number(e.target.value))}
+                />
+              </div>
+            )}
+
+            {/* Financial Recalculation Preview */}
+            {(() => {
+              const rate = Number(selectedReturnItem.dailyRate || selectedReturnItem.price || 0);
+              const curQty = Number(returnedQty) || 1;
+              const curDays = Number(daysUsed) || 1;
+              const returnedItemCost = rate * curQty * curDays;
+              const origDays = Number(selectedReturnItem.rentalDays || data.totalDays || 1);
+              const origItemCost = rate * curQty * origDays;
+              const diffCost = returnedItemCost - origItemCost;
+              const estNewTotal = Math.max(0, (Number(data.totalAmount) || 0) + diffCost);
+              const curPaid = Number(data.advancePayment) || 0;
+              const addPayment = amountPaidNow !== '' ? Number(amountPaidNow) : 0;
+              const totalPaidNow = curPaid + addPayment;
+              const estNewBalance = Math.max(0, estNewTotal - totalPaidNow);
+              const isOverpaid = totalPaidNow > estNewTotal;
+
+              return (
+                <div className="return-tool-calc-box">
+                  <div className="return-tool-calc-row">
+                    <span>Charge for this item ({curDays} day{curDays !== 1 ? 's' : ''} × {curQty} qty):</span>
+                    <strong>LKR {returnedItemCost.toLocaleString()}</strong>
+                  </div>
+                  <div className="return-tool-calc-row">
+                    <span>Previous Booked Cost:</span>
+                    <span style={{ textDecoration: 'line-through', color: 'var(--text-dim)' }}>LKR {origItemCost.toLocaleString()}</span>
+                  </div>
+                  <div className="return-tool-calc-row highlight">
+                    <span>New Total Bill Amount:</span>
+                    <strong>LKR {estNewTotal.toLocaleString()}</strong>
+                  </div>
+                  <div className="return-tool-calc-row">
+                    <span>Total Paid (Advance + Added):</span>
+                    <span style={{ color: 'var(--success)', fontWeight: 800 }}>LKR {totalPaidNow.toLocaleString()}</span>
+                  </div>
+                  <div className="return-tool-calc-row">
+                    <span>{isOverpaid ? 'Refund Due to Customer:' : 'Remaining Balance Due:'}</span>
+                    <strong style={{ color: isOverpaid ? 'var(--accent)' : estNewBalance > 0 ? 'var(--danger)' : 'var(--success)' }}>
+                      LKR {(isOverpaid ? (totalPaidNow - estNewTotal) : estNewBalance).toLocaleString()}
+                    </strong>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Optional Payment Received on Return */}
+            <div className="form-section" style={{ padding: '14px', background: 'var(--bg-card)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+              <p className="form-section-title" style={{ fontSize: '0.8rem', marginBottom: '10px' }}>
+                <ShieldCheck size={15} /> Collect Payment / Settle Balance (Optional)
+              </p>
+              <div className="form-grid-3">
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Amount Received (LKR)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={amountPaidNow}
+                    onChange={(e) => setAmountPaidNow(e.target.value)}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Payment Method</label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Cheque">Cheque</option>
+                    <option value="Card">Card</option>
+                  </select>
+                </div>
+                {paymentMethod === 'Bank Transfer' && (
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Bank Account *</label>
+                    <select
+                      value={accountId}
+                      required
+                      onChange={(e) => setAccountId(e.target.value)}
+                    >
+                      <option value="">Select Account</option>
+                      {accounts.map(acc => (
+                        <option key={acc._id} value={acc._id}>
+                          {acc.name || acc.bankName} ({acc.accountNumber || ''})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="modal-actions" style={{ marginTop: '24px', paddingTop: '18px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={() => setReturnModalOpen(false)}
+                disabled={submittingReturn}
+                style={{ height: '42px', padding: '0 20px', borderRadius: '10px', fontWeight: 700 }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="submit-btn"
+                disabled={submittingReturn}
+                style={{
+                  background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+                  color: '#ffffff',
+                  fontWeight: 800,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  height: '42px',
+                  padding: '0 24px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  boxShadow: '0 2px 10px rgba(16, 185, 129, 0.3)',
+                  cursor: submittingReturn ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {submittingReturn ? <RefreshCw size={16} className="spinner" /> : <CheckCircle size={16} />}
+                Confirm Return & Update Stock
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 };
