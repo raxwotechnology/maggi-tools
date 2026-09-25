@@ -405,9 +405,10 @@ export const generateInvoicePDF = async (invoice, mode = 'download') => {
     const deposit = Number(invoice.securityDeposit || 0);
     const overdue = Number(invoice.totalOverdueCharges || 0);
     const discount = Number(invoice.discount || 0);
-    const grandTotal = Number(invoice.totalAmount || 0);
+    const calculatedGrandTotal = Math.max(0, subtotalItemsAndParts + transportTotal + fuel + labour + overdue - discount);
+    const grandTotal = Number(invoice.totalAmount != null && Math.abs(Number(invoice.totalAmount) - calculatedGrandTotal) < 1 ? invoice.totalAmount : calculatedGrandTotal);
     const advancePaid = Number(invoice.advancePayment || 0);
-    const balanceDue = Number(invoice.balanceAmount != null ? invoice.balanceAmount : (grandTotal - advancePaid));
+    const balanceDue = Number(invoice.balanceAmount != null ? invoice.balanceAmount : Math.max(0, grandTotal - advancePaid));
 
     const pageHeight = doc.internal.pageSize.height;
     let currentY = safeGetY(doc, 140);

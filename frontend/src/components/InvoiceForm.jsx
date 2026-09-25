@@ -16,7 +16,7 @@ const defaultForm = () => ({
   unitType: 'Days',
   totalUnits: 0,
   ratePerUnit: 0,
-  items: [], // [{ toolNumber, model, category, dailyRate, totalUnits, unitType }]
+  items: [], // [{ toolNumber, model, category, dailyRate, quantity, totalUnits, unitType }]
   accessories: [], // { number, name, quantity, price }
   transportCharge: 0,
   fuelCharge: 0,
@@ -31,9 +31,9 @@ const defaultForm = () => ({
 });
 
 const calcTotal = (d) => {
-  const itemsTotal = (d.items || []).reduce((sum, it) => sum + (Number(it.dailyRate || 0) * Number(it.totalUnits || d.totalUnits || 0)), 0);
+  const itemsTotal = (d.items || []).reduce((sum, it) => sum + (Number(it.dailyRate || 0) * Number(it.totalUnits || d.totalUnits || 0) * Number(it.quantity || 1)), 0);
   const accTotal = (d.accessories || []).reduce((sum, a) => sum + (Number(a.price || 0) * Number(a.quantity || 0)), 0);
-  const legacyTotal = (!d.items || d.items.length === 0) ? (Number(d.totalUnits || 0) * Number(d.ratePerUnit || 0)) : 0;
+  const legacyTotal = (!d.items || d.items.length === 0) ? (Number(d.totalUnits || 0) * Number(d.ratePerUnit || 0) * Number(d.quantity || 1)) : 0;
   const extraTotal = Number(d.transportCharge || 0) + Number(d.fuelCharge || 0) + Number(d.labourCharge || 0) + Number(d.otherCharges || 0);
   const total = itemsTotal + accTotal + legacyTotal + extraTotal - Number(d.discount || 0);
   return +total.toFixed(2);
@@ -102,6 +102,7 @@ const InvoiceForm = ({ onSubmit, onCancel, initialData }) => {
       model: t.model,
       category: t.category,
       dailyRate: t.dailyRate || 0,
+      quantity: 1,
       totalUnits: formData.totalUnits || 1,
       unitType: formData.unitType || 'Days'
     };
@@ -205,8 +206,8 @@ const InvoiceForm = ({ onSubmit, onCancel, initialData }) => {
               {formData.items.map((it, idx) => (
                 <div key={idx} style={{ 
                     display: 'grid', 
-                    gridTemplateColumns: '2fr 1fr 1fr 1fr auto', 
-                    gap: '10px', 
+                    gridTemplateColumns: '2fr 0.8fr 1fr 1fr 1.2fr auto', 
+                    gap: '8px', 
                     alignItems: 'center',
                     background: 'var(--bg-side)',
                     padding: '10px',
@@ -219,6 +220,22 @@ const InvoiceForm = ({ onSubmit, onCancel, initialData }) => {
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <input 
                         type="number" 
+                        min="1"
+                        value={it.quantity ?? 1} 
+                        onChange={e => {
+                            const newItems = [...formData.items];
+                            newItems[idx].quantity = Math.max(1, Number(e.target.value));
+                            const up = { ...formData, items: newItems };
+                            up.totalAmount = calcTotal(up);
+                            setFormData(up);
+                        }} 
+                        placeholder="Qty"
+                        title="Quantity"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <input 
+                        type="number" 
                         value={it.totalUnits} 
                         onChange={e => {
                             const newItems = [...formData.items];
@@ -227,7 +244,8 @@ const InvoiceForm = ({ onSubmit, onCancel, initialData }) => {
                             up.totalAmount = calcTotal(up);
                             setFormData(up);
                         }} 
-                        placeholder="Units"
+                        placeholder="Days"
+                        title="Rental Duration"
                     />
                   </div>
                   <div className="form-group" style={{ marginBottom: 0 }}>
@@ -242,12 +260,13 @@ const InvoiceForm = ({ onSubmit, onCancel, initialData }) => {
                             setFormData(up);
                         }} 
                         placeholder="Rate"
+                        title="Rate per Day"
                     />
                   </div>
-                  <div style={{ fontSize: '12px', fontWeight: 'bold', textAlign: 'right' }}>
-                    LKR {(it.dailyRate * it.totalUnits).toLocaleString()}
+                  <div style={{ fontSize: '12px', fontWeight: 'bold', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    LKR {((Number(it.dailyRate) || 0) * (Number(it.quantity) || 1) * (Number(it.totalUnits) || 0)).toLocaleString()}
                   </div>
-                  <button type="button" onClick={() => removeToolFromInvoice(idx)} style={{ color: 'var(--danger)', border: 'none', background: 'none', cursor: 'pointer' }}>×</button>
+                  <button type="button" onClick={() => removeToolFromInvoice(idx)} style={{ color: 'var(--danger)', border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px' }}>×</button>
                 </div>
               ))}
             </div>
