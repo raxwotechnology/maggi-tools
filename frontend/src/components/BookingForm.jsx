@@ -3,7 +3,7 @@ import { toolAPI, bookingAPI, employeeAPI, clientAPI, accessoryAPI, accountAPI }
 import { Calendar, Package, MapPin, Hash, Info, User, Phone, Wallet, ShieldCheck, RefreshCw, TrendingUp, Plus, Trash2, FileText, Layers, Fuel, Users } from 'lucide-react';
 import Autocomplete from './Autocomplete';
 import '../styles/forms.css';
-import { calculateBookingCosts, distributeLumpSumPayment } from '../utils/bookingCalculations';
+import { calculateBookingCosts, distributeLumpSumPayment, calculate24HourRentalDays } from '../utils/bookingCalculations';
 import { toast } from '../utils/feedback';
 
 const BookingForm = ({ onSubmit, onCancel, initialData }) => {
@@ -44,6 +44,10 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
     clientPhone: '',
     pickupLocation: 'Maggi Tools Weliweriya',
     returnLocation: '',
+    pickupDate: new Date().toISOString().split('T')[0],
+    pickupTime: new Date().toTimeString().slice(0, 5),
+    returnDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    returnTime: new Date().toTimeString().slice(0, 5),
     conditionOnPickup: '',
     notes: '',
     status: 'Confirmed',
@@ -103,8 +107,20 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
         }));
       }
 
-      if (formattedData.pickupDate) formattedData.pickupDate = new Date(formattedData.pickupDate).toISOString().split('T')[0];
-      if (formattedData.returnDate) formattedData.returnDate = new Date(formattedData.returnDate).toISOString().split('T')[0];
+      if (formattedData.pickupDate) {
+        const pd = new Date(formattedData.pickupDate);
+        if (!isNaN(pd.getTime())) {
+          formattedData.pickupTime = pd.toTimeString().slice(0, 5);
+          formattedData.pickupDate = pd.toISOString().split('T')[0];
+        }
+      }
+      if (formattedData.returnDate) {
+        const rd = new Date(formattedData.returnDate);
+        if (!isNaN(rd.getTime())) {
+          formattedData.returnTime = rd.toTimeString().slice(0, 5);
+          formattedData.returnDate = rd.toISOString().split('T')[0];
+        }
+      }
 
       if (formattedData.securityDeposit != null && formattedData.deposit === '') {
         formattedData.deposit = formattedData.securityDeposit;
@@ -116,6 +132,11 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
       
       if (formattedData.actualReturnDate) formattedData.actualReturnDate = new Date(formattedData.actualReturnDate).toISOString().split('T')[0];
 
+      if (formattedData.totalDays) {
+        setTotalDays(Number(formattedData.totalDays) || 1);
+        setDaysMode('manual');
+      }
+
       setFormData(sanitizeMoneyFields(formattedData));
     } else {
       setFormData({ ...defaults });
@@ -123,6 +144,7 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
   }, [initialData]);
 
   const [totalDays, setTotalDays] = useState(1);
+  const [daysMode, setDaysMode] = useState('auto');
   const [costs, setCosts] = useState({
     baseAmount: 0,
     totalAmount: 0,
@@ -160,14 +182,14 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
   }, [formData.clientName, clients]);
 
   useEffect(() => {
-    const start = new Date(formData.pickupDate);
-    const end = new Date(formData.returnDate);
-    if (isNaN(start) || isNaN(end)) return;
+    if (daysMode === 'manual') return;
+    if (!formData.pickupDate || !formData.returnDate) return;
 
-    const diffTime = end - start;
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    setTotalDays(diffDays > 0 ? diffDays : 1);
-  }, [formData.pickupDate, formData.returnDate]);
+    const p = `${formData.pickupDate}T${formData.pickupTime || '09:00'}`;
+    const r = `${formData.returnDate}T${formData.returnTime || '09:00'}`;
+    const calculated = calculate24HourRentalDays(p, r, 2);
+    setTotalDays(calculated > 0 ? calculated : 1);
+  }, [formData.pickupDate, formData.pickupTime, formData.returnDate, formData.returnTime, daysMode]);
 
   useEffect(() => {
     const fetchAvailable = async () => {
@@ -615,16 +637,19 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
 
       const calc = calculateBookingCosts(formData, totalDays);
 
+      const pickupDateTime = `${formData.pickupDate}T${formData.pickupTime || '09:00'}`;
+      const returnDateTime = `${formData.returnDate}T${formData.returnTime || '09:00'}`;
+
       const finalBooking = {
         ...formData,
         ...(formData.items[0]?.tool ? { tool: formData.items[0].tool } : {}),
         baseAmount: calc.baseAmount,
         totalAmount: calc.totalAmount,
         balanceAmount: calc.balanceAmount,
-        // ✅ FIX: Amount Paid saved to the booking is now the computed sum of
-        // every tool item's + accessory's "Paid" field, not a manually typed value.
         advancePayment: calc.advance,
         totalDays,
+        pickupDate: pickupDateTime,
+        returnDate: returnDateTime,
         securityDeposit: Number(formData.deposit) || 0,
         transportCharge: Number(formData.transportCharge) || 0,
         fuelCharge: Number(formData.fuelCharge) || 0,
@@ -634,8 +659,6 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
         extraCharges: Number(formData.extraCharges) || 0,
         accessories: formData.bookingAccessories.map(a => {
           const rDays = Number(a.rentalDays) || totalDays;
-          const expRet = new Date(formData.pickupDate);
-          expRet.setDate(expRet.getDate() + Math.max(0, rDays - 1));
           return {
             accessory: a.accessoryId,
             name: a.name,
@@ -644,14 +667,12 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
             amountPaid: Number(a.amountPaid) || 0,
             amountDue: Math.max(0, ((Number(a.price) || 0) * (Number(a.quantity) || 1) * rDays) - (Number(a.amountPaid) || 0)),
             rentalDays: rDays,
-            rentalDate: formData.pickupDate,
-            expectedReturnDate: expRet.toISOString()
+            rentalDate: pickupDateTime,
+            expectedReturnDate: returnDateTime
           };
         }),
         items: formData.items.map(it => {
           const rDays = Number(it.rentalDays) || totalDays;
-          const expRet = new Date(formData.pickupDate);
-          expRet.setDate(expRet.getDate() + Math.max(0, rDays - 1));
           return {
             tool: it.tool,
             toolNumber: it.toolNumber,
@@ -662,8 +683,8 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
             amountPaid: Number(it.amountPaid) || 0,
             amountDue: Math.max(0, ((Number(it.dailyRate) || 0) * (Number(it.quantity) || 1) * rDays) - (Number(it.amountPaid) || 0)),
             rentalDays: rDays,
-            rentalDate: formData.pickupDate,
-            expectedReturnDate: expRet.toISOString()
+            rentalDate: pickupDateTime,
+            expectedReturnDate: returnDateTime
           };
         }),
         soldItems: (formData.soldItems || []).map(s => ({
@@ -708,24 +729,89 @@ const BookingForm = ({ onSubmit, onCancel, initialData }) => {
         <div className="hire-form-scroll">
 
           <div className="form-section">
-            <p className="form-section-title"><Calendar size={16} /> Rental Schedule</p>
-            <div className="form-grid-2">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <p className="form-section-title" style={{ margin: 0 }}><Calendar size={16} /> Rental Schedule</p>
+              <span style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 700 }}>
+                ⚡ 24h Cycle (2h Grace Period)
+              </span>
+            </div>
+            <div className="form-grid-3">
               <div className="form-group">
-                <label>Pickup Date *</label>
-                <input
-                  type="date"
-                  required
-                  value={formData.pickupDate || ''}
-                  onChange={e => setFormData(prev => ({ ...prev, pickupDate: e.target.value }))}
-                />
+                <label>Pickup Date & Time *</label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    type="date"
+                    required
+                    style={{ flex: 1.4 }}
+                    value={formData.pickupDate || ''}
+                    onChange={e => setFormData(prev => ({ ...prev, pickupDate: e.target.value }))}
+                  />
+                  <input
+                    type="time"
+                    style={{ flex: 1 }}
+                    value={formData.pickupTime || '09:00'}
+                    onChange={e => setFormData(prev => ({ ...prev, pickupTime: e.target.value }))}
+                  />
+                </div>
               </div>
               <div className="form-group">
-                <label>Return Date *</label>
+                <label>Return Date & Time *</label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    type="date"
+                    required
+                    style={{ flex: 1.4 }}
+                    value={formData.returnDate || ''}
+                    onChange={e => setFormData(prev => ({ ...prev, returnDate: e.target.value }))}
+                  />
+                  <input
+                    type="time"
+                    style={{ flex: 1 }}
+                    value={formData.returnTime || '09:00'}
+                    onChange={e => setFormData(prev => ({ ...prev, returnTime: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <label style={{ margin: 0 }}>Rental Days (Editable) *</label>
+                  <button
+                    type="button"
+                    style={{
+                      border: 'none',
+                      background: 'var(--accent-soft)',
+                      color: 'var(--accent)',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => {
+                      if (daysMode === 'manual') {
+                        setDaysMode('auto');
+                        const p = `${formData.pickupDate}T${formData.pickupTime || '09:00'}`;
+                        const r = `${formData.returnDate}T${formData.returnTime || '09:00'}`;
+                        setTotalDays(calculate24HourRentalDays(p, r, 2));
+                      } else {
+                        setDaysMode('manual');
+                      }
+                    }}
+                    title={daysMode === 'manual' ? 'Reset to auto-calculated 24h days' : 'Type days manually'}
+                  >
+                    {daysMode === 'manual' ? '✏️ Manual' : '⚡ Auto (24h)'}
+                  </button>
+                </div>
                 <input
-                  type="date"
+                  type="number"
+                  min="1"
                   required
-                  value={formData.returnDate || ''}
-                  onChange={e => setFormData(prev => ({ ...prev, returnDate: e.target.value }))}
+                  value={totalDays}
+                  onChange={e => {
+                    setDaysMode('manual');
+                    setTotalDays(Math.max(1, Number(e.target.value) || 1));
+                  }}
+                  title="Total billable days (1 day = 24h from pickup)"
                 />
               </div>
             </div>

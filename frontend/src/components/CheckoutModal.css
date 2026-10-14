@@ -582,3 +582,49 @@
   .rp-footer { flex-direction: column; }
   .rp-btn { width: 100%; }
 }
+
+/* ── Item Return Toggle & Kept Rented Banner ── */
+.rp-item-return-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+.rp-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.825rem;
+  font-weight: 700;
+  color: var(--text-main);
+  user-select: none;
+}
+.rp-checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+.rp-item-card--unreturned {
+  border-color: rgba(245, 158, 11, 0.3);
+  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(245, 158, 11, 0.04) 100%);
+  opacity: 0.9;
+}
+.rp-unreturned-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px dashed rgba(245, 158, 11, 0.4);
+  border-radius: var(--r-md);
+  color: #d97706;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}

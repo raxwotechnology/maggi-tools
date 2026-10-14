@@ -2,19 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import api from '../services/api';
 import { toast } from '../utils/feedback';
+import { calculate24HourRentalDays } from '../utils/bookingCalculations';
 import './CheckoutModal.css';
-
-// Calculate days rented from pickup to a given return date (inclusive, same-day = 0 charge)
-function calcDays(pickupDate, returnDateStr) {
-  if (!pickupDate || !returnDateStr) return 0;
-  const pickup = new Date(pickupDate);
-  pickup.setHours(0, 0, 0, 0);
-  const ret = new Date(returnDateStr);
-  ret.setHours(0, 0, 0, 0);
-  const diff = Math.round((ret - pickup) / (1000 * 60 * 60 * 24));
-  if (diff <= 0) return 0;
-  return diff + 1; // inclusive
-}
 
 export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts, onComplete }) {
   const [itemRows, setItemRows] = useState([]);
@@ -28,46 +17,51 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
   // Reset state when modal opens with a booking
   useEffect(() => {
     if (isOpen && bookingRecord) {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      const timeStr = now.toTimeString().slice(0, 5); // HH:mm
+      const returnDateTime = `${todayStr}T${timeStr}`;
 
       const items = (bookingRecord.items || []).map(it => {
         const pendingQty = (it.quantity || 1) - (it.returnedQuantity || 0);
-        const autoDays = calcDays(bookingRecord.pickupDate, todayStr) || it.rentalDays || bookingRecord.totalDays || 1;
+        const autoDays = calculate24HourRentalDays(bookingRecord.pickupDate, returnDateTime, 2) || it.rentalDays || bookingRecord.totalDays || 1;
         return {
           id: String(it._id || it.tool || ''),
           name: `${it.toolNumber || ''} - ${it.model || ''}`,
           dailyRate: Number(it.dailyRate) || 0,
           totalQty: it.quantity || 1,
           maxQty: pendingQty,
-          returningQty: pendingQty, // default to max so cost shows immediately
+          returningQty: pendingQty,
+          isReturning: pendingQty > 0, // default returning if pending, can be toggled off for staggered returns
           date: todayStr,
-          dayCount: autoDays,        // editable rental day count
-          dateMode: 'auto',          // 'auto' = recalculated whenever Return Date changes; 'manual' = typed directly
-          selectedAction: null,
+          time: timeStr,
+          dayCount: autoDays,        // editable rental day count (24h period with 2h grace)
+          dateMode: 'auto',          // 'auto' = recalculated whenever Return Date/Time changes; 'manual' = typed directly
+          selectedAction: 'return',
           amountPaid: it.amountPaid || 0,
         };
       });
 
       const accs = (bookingRecord.accessories || []).map(ac => {
         const pendingQty = (ac.quantity || 1) - (ac.returnedQuantity || 0);
-        const autoDays = calcDays(bookingRecord.pickupDate, todayStr) || ac.rentalDays || bookingRecord.totalDays || 1;
+        const autoDays = calculate24HourRentalDays(bookingRecord.pickupDate, returnDateTime, 2) || ac.rentalDays || bookingRecord.totalDays || 1;
         return {
           id: String(ac._id || ac.accessory || ''),
           name: ac.name || '',
           dailyRate: Number(ac.price) || 0,
           totalQty: ac.quantity || 1,
           maxQty: pendingQty,
-          returningQty: pendingQty, // default to max so cost shows immediately
+          returningQty: pendingQty,
+          isReturning: pendingQty > 0,
           date: todayStr,
-          dayCount: autoDays,        // editable rental day count
-          dateMode: 'auto',          // 'auto' = recalculated whenever Return Date changes; 'manual' = typed directly
-          selectedAction: null,
+          time: timeStr,
+          dayCount: autoDays,
+          dateMode: 'auto',
+          selectedAction: 'return',
           amountPaid: ac.amountPaid || 0,
         };
       });
 
-      // Sold / purchased items (registered tools sold outright, or unregistered/other items
-      // added manually) — customer already owns these, we just need to track payment.
       const solds = (bookingRecord.soldItems || []).map(s => ({
         id: String(s._id || s.tool || ''),
         name: s.toolNumber ? `${s.toolNumber} - ${s.model || ''}` : (s.model || 'Item'),
@@ -79,7 +73,6 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
       setItemRows(items);
       setAccRows(accs);
       setSoldRows(solds);
-      // Pre-fill with the booking's stored balance; will be overridden by live calc
       setPaymentAmount(Number(bookingRecord.balanceAmount || bookingRecord.totalAmount || 0));
       setPaymentMethod('Cash');
       setAccountId('');
@@ -91,49 +84,37 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
 
   /**
    * getItemTotalCost: canonical cost for one row.
-   *  - Uses row.maxQty (items STILL PENDING return) not orig.quantity (total booked).
-   *  - Consistent between the per-item card badge and the Bill Summary.
-   *  - For "Return W/O Pay" action we still show the cost but mark it separately.
+   *  - If returning now: charges rate * returningQty * dayCount.
+   *  - If kept with customer: charges rate * maxQty * bookedDays.
+   *  - No duplicate overdue penalties (daily rate covers days rented).
    */
   function getItemTotalCost(row, orig) {
-    // Days is user-editable via the "Days" dropdown; falls back to booking data.
-    const days  = Number(row?.dayCount) || orig?.rentalDays || bookingRecord?.totalDays || 1;
-    const qty   = Number(row.maxQty) || 0;           // pending qty only
-    const rate  = Number(row.dailyRate) || 0;
-    let cost    = rate * qty * days;
-
-    // Add stored overdue charge from DB (already calculated by backend)
-    cost += Number(orig?.totalOverdueCharge) || 0;
-
-    // If return date is later than expected, add live overdue charge too
-    const expRetDate = orig?.expectedReturnDate
-      ? new Date(orig.expectedReturnDate)
-      : new Date(bookingRecord?.returnDate || pickupDate);
-    expRetDate.setHours(0, 0, 0, 0);
-    const actRetDate = new Date(row.date);
-    actRetDate.setHours(0, 0, 0, 0);
-    if (actRetDate > expRetDate) {
-      const overdueDays   = Math.ceil((actRetDate - expRetDate) / (1000 * 60 * 60 * 24));
-      const penaltyRate   = Number(orig?.overdueChargePerDay) || Number(row.dailyRate) || 500;
-      cost += overdueDays * penaltyRate * qty;
+    if (!row.isReturning) {
+      const days = orig?.rentalDays || bookingRecord?.totalDays || 1;
+      const qty = Number(row.maxQty) || 0;
+      const rate = Number(row.dailyRate) || 0;
+      return rate * qty * days;
     }
 
-    return cost;
+    const days = Number(row?.dayCount) || orig?.rentalDays || bookingRecord?.totalDays || 1;
+    const qty = Number(row.returningQty) || Number(row.maxQty) || 0;
+    const rate = Number(row.dailyRate) || 0;
+    return rate * qty * days;
   }
 
-  // Items subtotal: sum of cost for ALL pending items
+  // Items subtotal: sum of cost for ALL items (returning items with actual days + kept items with booked days)
   const itemsSubtotal = itemRows.reduce((s, r) => {
     const orig = (bookingRecord?.items || []).find(it => String(it._id || it.tool) === r.id);
     return s + getItemTotalCost(r, orig);
   }, 0);
 
-  // Accessories subtotal: sum of cost for ALL pending accessories
+  // Accessories subtotal
   const accsSubtotal = accRows.reduce((s, r) => {
     const orig = (bookingRecord?.accessories || []).find(ac => String(ac._id || ac.accessory) === r.id);
     return s + getItemTotalCost(r, orig);
   }, 0);
 
-  // Sold/purchased items subtotal — one-time purchase, price × qty, no per-day multiplier
+  // Sold/purchased items subtotal
   const soldsSubtotal = soldRows.reduce((s, r) => s + (Number(r.price) || 0) * (Number(r.quantity) || 1), 0);
 
   const transport    = Number(bookingRecord?.transportCharge) || 0;
@@ -142,11 +123,9 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
   const discount     = Number(bookingRecord?.discount)        || 0;
   const extraCharges = Number(bookingRecord?.extraCharges)    || 0;
 
-  // Grand total for this return session
+  // Grand total for this booking
   const calculatedTotal = Math.max(0, itemsSubtotal + accsSubtotal + soldsSubtotal + transport + fuel + labour + extraCharges - discount);
 
-  // Already paid = booking-level advance + ALL per-item amountPaid typed in the form
-  // This updates LIVE as user types in Paid fields because itemRows/accRows/soldRows are state
   const itemsPaidInForm = itemRows.reduce((s, r) => s + (Number(r.amountPaid) || 0), 0);
   const accsPaidInForm  = accRows.reduce((s, r) => s + (Number(r.amountPaid) || 0), 0);
   const soldsPaidInForm = soldRows.reduce((s, r) => s + (Number(r.amountPaid) || 0), 0);
@@ -164,51 +143,54 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
         ? overridePaymentAmount 
         : (paymentAmount !== '' ? Number(paymentAmount) : undefined);
         
+      const activeItemRows = itemRows.filter(it => it.isReturning && Number(it.returningQty) > 0);
+      const activeAccRows = accRows.filter(ac => ac.isReturning && Number(ac.returningQty) > 0);
+
       const payload = {
-        returnedItems: noReturn ? [] : itemRows.filter(it => !it.selectedAction || it.selectedAction === 'return').map(it => ({
+        returnedItems: noReturn ? [] : activeItemRows.filter(it => !it.selectedAction || it.selectedAction === 'return').map(it => ({
           id: it.id,
           quantity: Number(it.returningQty),
-          date: it.date,
+          date: `${it.date}T${it.time || '12:00'}`,
           days: Number(it.dayCount) || undefined,
           dayCount: Number(it.dayCount) || undefined,
           amountPaid: Number(it.amountPaid) || 0,
         })),
-        returnedWithoutPayItems: noReturn ? [] : itemRows.filter(it => it.selectedAction === 'return_no_pay').map(it => ({
+        returnedWithoutPayItems: noReturn ? [] : activeItemRows.filter(it => it.selectedAction === 'return_no_pay').map(it => ({
           id: it.id,
           quantity: Number(it.returningQty),
-          date: it.date,
+          date: `${it.date}T${it.time || '12:00'}`,
           days: Number(it.dayCount) || undefined,
           dayCount: Number(it.dayCount) || undefined,
           amountPaid: Number(it.amountPaid) || 0,
         })),
-        paidNotReturnedItems: noReturn ? [] : itemRows.filter(it => it.selectedAction === 'paid_no_return').map(it => ({
+        paidNotReturnedItems: noReturn ? [] : activeItemRows.filter(it => it.selectedAction === 'paid_no_return').map(it => ({
           id: it.id,
           quantity: Number(it.returningQty),
-          date: it.date,
+          date: `${it.date}T${it.time || '12:00'}`,
           days: Number(it.dayCount) || undefined,
           dayCount: Number(it.dayCount) || undefined,
           amountPaid: Number(it.amountPaid) || 0,
         })),
-        returnedAccessories: noReturn ? [] : accRows.filter(ac => !ac.selectedAction || ac.selectedAction === 'return').map(ac => ({
+        returnedAccessories: noReturn ? [] : activeAccRows.filter(ac => !ac.selectedAction || ac.selectedAction === 'return').map(ac => ({
           id: ac.id,
           quantity: Number(ac.returningQty),
-          date: ac.date,
+          date: `${ac.date}T${ac.time || '12:00'}`,
           days: Number(ac.dayCount) || undefined,
           dayCount: Number(ac.dayCount) || undefined,
           amountPaid: Number(ac.amountPaid) || 0,
         })),
-        returnedWithoutPayAccessories: noReturn ? [] : accRows.filter(ac => ac.selectedAction === 'return_no_pay').map(ac => ({
+        returnedWithoutPayAccessories: noReturn ? [] : activeAccRows.filter(ac => ac.selectedAction === 'return_no_pay').map(ac => ({
           id: ac.id,
           quantity: Number(ac.returningQty),
-          date: ac.date,
+          date: `${ac.date}T${ac.time || '12:00'}`,
           days: Number(ac.dayCount) || undefined,
           dayCount: Number(ac.dayCount) || undefined,
           amountPaid: Number(ac.amountPaid) || 0,
         })),
-        paidNotReturnedAccessories: noReturn ? [] : accRows.filter(ac => ac.selectedAction === 'paid_no_return').map(ac => ({
+        paidNotReturnedAccessories: noReturn ? [] : activeAccRows.filter(ac => ac.selectedAction === 'paid_no_return').map(ac => ({
           id: ac.id,
           quantity: Number(ac.returningQty),
-          date: ac.date,
+          date: `${ac.date}T${ac.time || '12:00'}`,
           days: Number(ac.dayCount) || undefined,
           dayCount: Number(ac.dayCount) || undefined,
           amountPaid: Number(ac.amountPaid) || 0,
@@ -315,7 +297,30 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
     }
 
     return (
-      <div key={row.id} className={`rp-item-card${overdueDays > 0 ? ' rp-item-card--overdue' : ''}`}>
+      <div key={row.id} className={`rp-item-card${!row.isReturning ? ' rp-item-card--unreturned' : overdueDays > 0 ? ' rp-item-card--overdue' : ''}`}>
+
+        {/* ─── Return Toggle (Return Now vs Keep with Customer) ─── */}
+        <div className="rp-item-return-toggle">
+          <label className="rp-checkbox-label">
+            <input
+              type="checkbox"
+              checked={!!row.isReturning}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                updateRow({
+                  isReturning: checked,
+                  selectedAction: checked ? (row.selectedAction || 'return') : null,
+                  returningQty: checked ? row.maxQty : 0
+                });
+              }}
+              disabled={loading}
+            />
+            <span>{row.isReturning ? '📦 Return This Item Now' : '⏳ Still With Customer (Keep Rented)'}</span>
+          </label>
+          <span style={{ fontSize: '0.75rem', color: row.isReturning ? 'var(--success)' : '#d97706', fontWeight: 800 }}>
+            {row.isReturning ? 'Ready to Return' : 'Kept Rented'}
+          </span>
+        </div>
 
         {/* ─── Card Header ─── */}
         <div className="rp-item-header">
@@ -328,7 +333,7 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
                 &nbsp;·&nbsp;
                 {row.maxQty} pending qty
                 &nbsp;·&nbsp;
-                {days} day{days !== 1 ? 's' : ''}
+                {days} day{days !== 1 ? 's' : ''} {row.isReturning ? '(charged)' : '(booked)'}
               </div>
             </div>
           </div>
@@ -338,131 +343,163 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
           </div>
         </div>
 
-        {/* ─── Expected Return & Overdue ─── */}
-        <div className="rp-item-dates">
-          <span className="rp-date-pill">
-            📅 Expected {expRetDate.toLocaleDateString()}
-          </span>
-          {overdueDays > 0 && (
-            <span className="rp-overdue-pill">
-              🚨 {overdueDays} Day{overdueDays > 1 ? 's' : ''} Overdue
-            </span>
-          )}
-        </div>
-
-        {/* ─── Input Controls Grid ─── */}
-        <div className="rp-controls-grid">
-          <div className="rp-control-field">
-            <label className="rp-control-label">Return Date</label>
-            <input
-              type="date"
-              className="rp-control-input"
-              value={row.date}
-              onChange={e => {
-                const newDate = e.target.value;
-                if (row.dateMode === 'manual') {
-                  // Manual mode: date changes don't touch the typed day count
-                  updateRow({ date: newDate });
-                } else {
-                  // Auto mode: day count follows the date, live, until Confirm is clicked
-                  const autoDays = calcDays(pickupDate, newDate) || 1;
-                  updateRow({ date: newDate, dayCount: autoDays });
-                }
-              }}
-            />
+        {!row.isReturning ? (
+          <div className="rp-unreturned-banner">
+            <span>⏳ This item remains with the customer. It will not be returned today and will be charged for {orig?.rentalDays || bookingRecord?.totalDays || 1} booked day(s).</span>
           </div>
-          <div className="rp-control-field">
-            <label className="rp-control-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>Days</span>
+        ) : (
+          <>
+            {/* ─── Expected Return & Overdue ─── */}
+            <div className="rp-item-dates">
+              <span className="rp-date-pill">
+                📅 Expected {expRetDate.toLocaleDateString()}
+              </span>
+              {overdueDays > 0 && (
+                <span className="rp-overdue-pill">
+                  🚨 {overdueDays} Day{overdueDays > 1 ? 's' : ''} Overdue
+                </span>
+              )}
+            </div>
+
+            {/* ─── Input Controls Grid ─── */}
+            <div className="rp-controls-grid">
+              <div className="rp-control-field" style={{ minWidth: '150px' }}>
+                <label className="rp-control-label">Return Date & Time</label>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <input
+                    type="date"
+                    className="rp-control-input"
+                    style={{ flex: 1.4 }}
+                    value={row.date}
+                    onChange={e => {
+                      const newDate = e.target.value;
+                      if (row.dateMode === 'manual') {
+                        updateRow({ date: newDate });
+                      } else {
+                        const retDt = `${newDate}T${row.time || '12:00'}`;
+                        const autoDays = calculate24HourRentalDays(pickupDate, retDt, 2);
+                        updateRow({ date: newDate, dayCount: autoDays });
+                      }
+                    }}
+                  />
+                  <input
+                    type="time"
+                    className="rp-control-input"
+                    style={{ flex: 1 }}
+                    value={row.time || '12:00'}
+                    onChange={e => {
+                      const newTime = e.target.value;
+                      if (row.dateMode === 'manual') {
+                        updateRow({ time: newTime });
+                      } else {
+                        const retDt = `${row.date}T${newTime}`;
+                        const autoDays = calculate24HourRentalDays(pickupDate, retDt, 2);
+                        updateRow({ time: newTime, dayCount: autoDays });
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="rp-control-field">
+                <label className="rp-control-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>Days</span>
+                  <button
+                    type="button"
+                    className="rp-daymode-toggle"
+                    onClick={() => {
+                      if (row.dateMode === 'manual') {
+                        const retDt = `${row.date}T${row.time || '12:00'}`;
+                        updateRow({ dateMode: 'auto', dayCount: calculate24HourRentalDays(pickupDate, retDt, 2) });
+                      } else {
+                        updateRow({ dateMode: 'manual' });
+                      }
+                    }}
+                    disabled={loading}
+                    title={row.dateMode === 'manual' ? 'Switch back to auto (calculated from 24h cycle)' : 'Type the day count manually'}
+                  >
+                    {row.dateMode === 'manual' ? '✏️ Manual' : '⚡ Auto (24h)'}
+                  </button>
+                </label>
+                {row.dateMode === 'manual' ? (
+                  <input
+                    type="number"
+                    className="rp-control-input"
+                    min="1"
+                    value={row.dayCount}
+                    onChange={e => updateRow({ dayCount: Math.max(1, Number(e.target.value) || 1) })}
+                    disabled={loading}
+                  />
+                ) : (
+                  <div 
+                    className="rp-control-input rp-control-input--readonly" 
+                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                    onClick={() => updateRow({ dateMode: 'manual' })}
+                    title="Click to edit days manually"
+                  >
+                    <span>{days} day{days !== 1 ? 's' : ''}</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--accent)' }}>✏️</span>
+                  </div>
+                )}
+              </div>
+              <div className="rp-control-field">
+                <label className="rp-control-label">Qty (max {row.maxQty})</label>
+                <input
+                  type="number"
+                  className="rp-control-input"
+                  min="0"
+                  max={row.maxQty}
+                  value={row.returningQty}
+                  onChange={e => updateRow({ returningQty: Math.min(row.maxQty, Math.max(0, Number(e.target.value))) })}
+                />
+              </div>
+              <div className="rp-control-field">
+                <label className="rp-control-label">Paid (LKR)</label>
+                <input
+                  type="number"
+                  className="rp-control-input rp-control-input--paid"
+                  min="0"
+                  value={row.amountPaid === 0 ? '' : row.amountPaid}
+                  placeholder="0"
+                  onChange={e => updateRow({ amountPaid: e.target.value === '' ? '' : Number(e.target.value) })}
+                />
+              </div>
+              <div className="rp-control-field">
+                <label className="rp-control-label">Due</label>
+                <div className={`rp-due-display${amtDue > 0 ? ' rp-due-display--unpaid' : ' rp-due-display--clear'}`}>
+                  LKR {amtDue.toLocaleString()}
+                </div>
+              </div>
+            </div>
+
+            {/* ─── Action Pills ─── */}
+            <div className="rp-action-pills">
               <button
                 type="button"
-                className="rp-daymode-toggle"
-                onClick={() => {
-                  if (row.dateMode === 'manual') {
-                    // Switching back to Auto: snap to the calculated value right away
-                    updateRow({ dateMode: 'auto', dayCount: calcDays(pickupDate, row.date) || 1 });
-                  } else {
-                    updateRow({ dateMode: 'manual' });
-                  }
-                }}
+                className={`rp-pill rp-pill--danger${row.selectedAction === 'return_no_pay' ? ' rp-pill--active' : ''}`}
+                onClick={() => toggle('return_no_pay')}
                 disabled={loading}
-                title={row.dateMode === 'manual' ? 'Switch back to auto (calculated from Return Date)' : 'Type the day count manually'}
               >
-                {row.dateMode === 'manual' ? '✏️ Manual' : '⚡ Auto'}
+                {row.selectedAction === 'return_no_pay' ? '✅' : '↩'} Return W/O Pay
               </button>
-            </label>
-            {row.dateMode === 'manual' ? (
-              <input
-                type="number"
-                className="rp-control-input"
-                min="0"
-                value={row.dayCount}
-                onChange={e => updateRow({ dayCount: Math.max(0, Number(e.target.value) || 0) })}
+              <button
+                type="button"
+                className={`rp-pill rp-pill--accent${row.selectedAction === 'paid_no_return' ? ' rp-pill--active' : ''}`}
+                onClick={() => toggle('paid_no_return')}
                 disabled={loading}
-              />
-            ) : (
-              <div className="rp-control-input rp-control-input--readonly">
-                {days} day{days !== 1 ? 's' : ''}
-              </div>
-            )}
-          </div>
-          <div className="rp-control-field">
-            <label className="rp-control-label">Qty (max {row.maxQty})</label>
-            <input
-              type="number"
-              className="rp-control-input"
-              min="0"
-              max={row.maxQty}
-              value={row.returningQty}
-              onChange={e => updateRow({ returningQty: Math.min(row.maxQty, Math.max(0, Number(e.target.value))) })}
-            />
-          </div>
-          <div className="rp-control-field">
-            <label className="rp-control-label">Paid (LKR)</label>
-            <input
-              type="number"
-              className="rp-control-input rp-control-input--paid"
-              min="0"
-              value={row.amountPaid === 0 ? '' : row.amountPaid}
-              placeholder="0"
-              onChange={e => updateRow({ amountPaid: e.target.value === '' ? '' : Number(e.target.value) })}
-            />
-          </div>
-          <div className="rp-control-field">
-            <label className="rp-control-label">Due</label>
-            <div className={`rp-due-display${amtDue > 0 ? ' rp-due-display--unpaid' : ' rp-due-display--clear'}`}>
-              LKR {amtDue.toLocaleString()}
+              >
+                {row.selectedAction === 'paid_no_return' ? '✅' : '💳'} Paid (Not Returned)
+              </button>
+              <button
+                type="button"
+                className={`rp-pill rp-pill--success${row.selectedAction === 'return' ? ' rp-pill--active' : ''}`}
+                onClick={() => toggle('return')}
+                disabled={loading}
+              >
+                {row.selectedAction === 'return' ? '✅ Returned' : '📦 Mark as Returned'}
+              </button>
             </div>
-          </div>
-        </div>
-
-        {/* ─── Action Pills ─── */}
-        <div className="rp-action-pills">
-          <button
-            type="button"
-            className={`rp-pill rp-pill--danger${row.selectedAction === 'return_no_pay' ? ' rp-pill--active' : ''}`}
-            onClick={() => toggle('return_no_pay')}
-            disabled={loading}
-          >
-            {row.selectedAction === 'return_no_pay' ? '✅' : '↩'} Return W/O Pay
-          </button>
-          <button
-            type="button"
-            className={`rp-pill rp-pill--accent${row.selectedAction === 'paid_no_return' ? ' rp-pill--active' : ''}`}
-            onClick={() => toggle('paid_no_return')}
-            disabled={loading}
-          >
-            {row.selectedAction === 'paid_no_return' ? '✅' : '💳'} Paid (Not Returned)
-          </button>
-          <button
-            type="button"
-            className={`rp-pill rp-pill--success${row.selectedAction === 'return' ? ' rp-pill--active' : ''}`}
-            onClick={() => toggle('return')}
-            disabled={loading}
-          >
-            {row.selectedAction === 'return' ? '✅ Returned' : '📦 Mark as Returned'}
-          </button>
-        </div>
+          </>
+        )}
       </div>
     );
   };
@@ -473,9 +510,12 @@ export default function CheckoutModal({ isOpen, onClose, bookingRecord, accounts
 
         {/* ── Booking date strip ── */}
         <div className="rp-date-strip">
-          <span>📦 Picked up: <strong>{bookingRecord.pickupDate ? new Date(bookingRecord.pickupDate).toLocaleDateString() : '—'}</strong></span>
+          <span>📦 Picked up: <strong>{bookingRecord.pickupDate ? new Date(bookingRecord.pickupDate).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '—'}</strong></span>
           <span className="rp-date-sep">→</span>
-          <span>🏁 Expected: <strong>{bookingRecord.returnDate ? new Date(bookingRecord.returnDate).toLocaleDateString() : '—'}</strong></span>
+          <span>🏁 Expected: <strong>{bookingRecord.returnDate ? new Date(bookingRecord.returnDate).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '—'}</strong></span>
+          <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--accent)', fontWeight: 700 }}>
+            ⚡ 24h Cycle (2h Grace)
+          </span>
         </div>
 
         {/* ── Section title ── */}

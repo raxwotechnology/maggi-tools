@@ -4,6 +4,7 @@ import { generateInvoicePDF, generateQuotationPDF } from '../utils/billingGenera
 import api, { bookingAPI } from '../services/api';
 import Modal from './Modal';
 import { toast } from '../utils/feedback';
+import { calculate24HourRentalDays } from '../utils/bookingCalculations';
 import logoUrl from '../logo.png';
 import './RecordDetails.css';
 
@@ -490,17 +491,13 @@ const RecordDetails = ({ data: initialData, type, onDataChange }) => {
 
   const handleOpenReturnItem = (item, isAcc = false) => {
     const pendingQty = Math.max(1, (item.quantity || 1) - (item.returnedQuantity || 0));
-    const todayStr = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
     
-    // Auto calculate days from pickup date to today
+    // Auto calculate days from pickup date using 24h cycle with 2h grace period
     let calculatedDays = 1;
     if (data?.pickupDate) {
-      const p = new Date(data.pickupDate);
-      p.setHours(0, 0, 0, 0);
-      const t = new Date(todayStr);
-      t.setHours(0, 0, 0, 0);
-      const diff = Math.round((t - p) / (1000 * 60 * 60 * 24));
-      calculatedDays = diff <= 0 ? 1 : diff + 1;
+      calculatedDays = calculate24HourRentalDays(data.pickupDate, now, 2);
     } else {
       calculatedDays = Number(item.rentalDays) || Number(data?.totalDays) || 1;
     }
@@ -519,12 +516,7 @@ const RecordDetails = ({ data: initialData, type, onDataChange }) => {
   const handleReturnDateChange = (newDateStr) => {
     setReturnDate(newDateStr);
     if (data?.pickupDate && newDateStr) {
-      const p = new Date(data.pickupDate);
-      p.setHours(0, 0, 0, 0);
-      const t = new Date(newDateStr);
-      t.setHours(0, 0, 0, 0);
-      const diff = Math.round((t - p) / (1000 * 60 * 60 * 24));
-      const autoDays = diff <= 0 ? 1 : diff + 1;
+      const autoDays = calculate24HourRentalDays(data.pickupDate, newDateStr, 2);
       setDaysUsed(autoDays);
     }
   };
@@ -1413,16 +1405,16 @@ const RecordDetails = ({ data: initialData, type, onDataChange }) => {
               </div>
 
               <div className="form-group">
-                <label>Actual Days Used *</label>
+                <label>Actual Days Used (Editable) *</label>
                 <input
                   type="number"
                   min="1"
                   required
                   value={daysUsed}
-                  onChange={(e) => setDaysUsed(Math.max(1, Number(e.target.value)))}
+                  onChange={(e) => setDaysUsed(Math.max(1, Number(e.target.value) || 1))}
                 />
                 <small style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  Originally booked for {selectedReturnItem.rentalDays || data.totalDays || 1} days.
+                  Auto: 24h cycle (2h grace). Editable manually. Booked: {selectedReturnItem.rentalDays || data.totalDays || 1} days.
                 </small>
               </div>
             </div>

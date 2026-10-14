@@ -85,14 +85,44 @@ async function sendAdvancePaymentSms(bookingData, amountReceived, paymentMethod 
   }
 }
 
-function calcBookingTotals(body) {
-  const pickup = new Date(body.pickupDate);
-  const ret = new Date(body.returnDate);
-  let totalDays = Number(body.totalDays) || 1;
-  if (!isNaN(pickup) && !isNaN(ret)) {
-    const diff = Math.floor((ret - pickup) / (1000 * 60 * 60 * 24)) + 1;
-    if (diff > 0) totalDays = diff;
+function calculate24HourRentalDays(pickupDate, returnDate, graceHours = 2) {
+  if (!pickupDate || !returnDate) return 1;
+  const p = new Date(pickupDate);
+  const r = new Date(returnDate);
+  if (isNaN(p.getTime()) || isNaN(r.getTime())) return 1;
+
+  const diffMs = r.getTime() - p.getTime();
+  if (diffMs <= 0) return 1;
+
+  const diffHours = diffMs / (1000 * 60 * 60);
+
+  const isMidnight = (d) => d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0;
+  if (isMidnight(p) && isMidnight(r)) {
+    const calendarDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    return calendarDays <= 0 ? 1 : calendarDays;
   }
+
+  const fullDays = Math.floor(diffHours / 24);
+  const remainingHours = diffHours % 24;
+
+  if (fullDays === 0) return 1;
+
+  if (remainingHours <= graceHours) {
+    return Math.max(1, fullDays);
+  } else {
+    return Math.max(1, fullDays + 1);
+  }
+}
+
+function calcBookingTotals(body) {
+  let totalDays = Number(body.totalDays) || 0;
+  if (totalDays <= 0 && body.pickupDate && body.returnDate) {
+    totalDays = calculate24HourRentalDays(body.pickupDate, body.returnDate, 2);
+  }
+  if (totalDays <= 0) totalDays = 1;
+
+  const pickup = body.pickupDate ? new Date(body.pickupDate) : new Date();
+  const ret = body.returnDate ? new Date(body.returnDate) : pickup;
 
   const items = Array.isArray(body.items) ? body.items : [];
   const accessories = Array.isArray(body.accessories) ? body.accessories : [];
@@ -110,14 +140,7 @@ function calcBookingTotals(body) {
         
         let diffDays = Number(rd.days);
         if (!diffDays || isNaN(diffDays) || diffDays <= 0) {
-          const rdDate = new Date(rd.date);
-          rdDate.setHours(0,0,0,0);
-          const pickupDateObj = new Date(pickup);
-          pickupDateObj.setHours(0,0,0,0);
-          
-          diffDays = Math.round((rdDate - pickupDateObj) / (1000 * 60 * 60 * 24));
-          if (diffDays <= 0) diffDays = 1; // Same day return = 1 day minimum
-          else diffDays += 1; // Align with totalDays calculation (inclusive of start day)
+          diffDays = calculate24HourRentalDays(pickup, rd.date, 2);
         }
         cost += rate * qty * diffDays;
       });
@@ -128,12 +151,7 @@ function calcBookingTotals(body) {
       // Use per-item rental days if set, otherwise fall back to booking-level totalDays
       let daysForUnreturned = (item.rentalDays && Number(item.rentalDays) > 0) ? Number(item.rentalDays) : totalDays;
       if (body.actualReturnDate && !item.rentalDays) {
-         const actDate = new Date(body.actualReturnDate);
-         actDate.setHours(0,0,0,0);
-         const pickupDateObj = new Date(pickup);
-         pickupDateObj.setHours(0,0,0,0);
-         daysForUnreturned = Math.round((actDate - pickupDateObj) / (1000 * 60 * 60 * 24)) + 1;
-         if (daysForUnreturned < 1) daysForUnreturned = 1;
+         daysForUnreturned = calculate24HourRentalDays(pickup, body.actualReturnDate, 2);
       }
       cost += rate * unreturned * daysForUnreturned;
     }
@@ -1033,19 +1051,9 @@ router.put('/:id/return-single-item', authMiddleware, async (req, res) => {
     targetItem.actualReturnDate = returnDateObj;
     targetItem.returnStatus = 'Returned';
 
-    // Calculate overdue penalty if applicable
-    const expectedRet = targetItem.expectedReturnDate ? new Date(targetItem.expectedReturnDate) : new Date(booking.returnDate);
-    expectedRet.setHours(0, 0, 0, 0);
-    const actRet = new Date(returnDateObj);
-    actRet.setHours(0, 0, 0, 0);
-    if (actRet > expectedRet) {
-      const overdueDays = Math.ceil((actRet - expectedRet) / (1000 * 60 * 60 * 24));
-      const penaltyRate = Number(targetItem.overdueChargePerDay) || 500;
-      const penalty = overdueDays * penaltyRate * qty;
-      if (overdueDays > (targetItem.overdueDays || 0)) targetItem.overdueDays = overdueDays;
-      targetItem.totalOverdueCharge = (targetItem.totalOverdueCharge || 0) + penalty;
-      targetItem.returnStatus = 'Overdue';
-    }
+    // Daily rental covers the actual days used without duplicate overdue penalties
+    targetItem.overdueDays = 0;
+    targetItem.totalOverdueCharge = 0;
 
     // Restore stock in database immediately
     if (!isAccessory) {
@@ -1156,23 +1164,9 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
           item.actualReturnDate = itemDate;
           item.returnStatus = 'Returned';
           
-          // Calculate and store overdue penalties
-          const expectedRet = item.expectedReturnDate ? new Date(item.expectedReturnDate) : new Date(booking.returnDate);
-          expectedRet.setHours(0, 0, 0, 0);
-          const actRet = new Date(itemDate);
-          actRet.setHours(0, 0, 0, 0);
-          
-          if (actRet > expectedRet) {
-            const overdueDays = Math.ceil((actRet - expectedRet) / (1000 * 60 * 60 * 24));
-            const penaltyRate = Number(item.overdueChargePerDay) || 500;
-            const penalty = overdueDays * penaltyRate * qty;
-            
-            if (overdueDays > (item.overdueDays || 0)) {
-              item.overdueDays = overdueDays;
-            }
-            item.totalOverdueCharge = (item.totalOverdueCharge || 0) + penalty;
-            item.returnStatus = 'Overdue';
-          }
+          // Daily rental covers the actual days used without duplicate overdue penalties
+          item.overdueDays = 0;
+          item.totalOverdueCharge = 0;
           
           // Restore Tool Stock
           if (isValidObjectId(item.tool)) {
@@ -1259,23 +1253,9 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
           acc.actualReturnDate = accDate;
           acc.returnStatus = 'Returned';
           
-          // Calculate and store overdue penalties
-          const expectedRet = acc.expectedReturnDate ? new Date(acc.expectedReturnDate) : new Date(booking.returnDate);
-          expectedRet.setHours(0, 0, 0, 0);
-          const actRet = new Date(accDate);
-          actRet.setHours(0, 0, 0, 0);
-          
-          if (actRet > expectedRet) {
-            const overdueDays = Math.ceil((actRet - expectedRet) / (1000 * 60 * 60 * 24));
-            const penaltyRate = Number(acc.overdueChargePerDay) || 500;
-            const penalty = overdueDays * penaltyRate * qty;
-            
-            if (overdueDays > (acc.overdueDays || 0)) {
-              acc.overdueDays = overdueDays;
-            }
-            acc.totalOverdueCharge = (acc.totalOverdueCharge || 0) + penalty;
-            acc.returnStatus = 'Overdue';
-          }
+          // Daily rental covers the actual days used without duplicate overdue penalties
+          acc.overdueDays = 0;
+          acc.totalOverdueCharge = 0;
           
           // Restore Accessory Stock
           if (isValidObjectId(acc.accessory)) {
@@ -1405,23 +1385,17 @@ router.put('/:id/partial-return', authMiddleware, async (req, res) => {
           const lines = [];
           (savedBooking.items || []).forEach(it => {
             const name = `${it.toolNumber || ''} - ${it.model || 'Tool'}`;
-            const lastReturn = it.returnDates?.length > 0 ? it.returnDates[it.returnDates.length - 1].date : savedBooking.returnDate;
-            const retDate = new Date(lastReturn);
-            retDate.setHours(0, 0, 0, 0);
-            let rentedDays = Math.round((retDate - pickupDateObj) / (1000 * 60 * 60 * 24));
-            if (rentedDays <= 0) rentedDays = 0; else rentedDays += 1;
-            const itemDays = it.rentalDays || savedBooking.totalDays || rentedDays || 1;
-            lines.push(`• ${name} - ${rentedDays} day${rentedDays !== 1 ? 's' : ''} rented (${itemDays} day${itemDays !== 1 ? 's' : ''} booked)`);
+            const lastReturn = it.returnDates?.length > 0 ? it.returnDates[it.returnDates.length - 1].date : (it.actualReturnDate || savedBooking.returnDate);
+            const rentedDays = it.rentalDays || calculate24HourRentalDays(savedBooking.pickupDate, lastReturn, 2);
+            const bookedDays = savedBooking.totalDays || 1;
+            lines.push(`• ${name} - ${rentedDays} day${rentedDays !== 1 ? 's' : ''} rented (${bookedDays} day${bookedDays !== 1 ? 's' : ''} booked)`);
           });
           (savedBooking.accessories || []).forEach(ac => {
             const name = ac.name || 'Accessory';
-            const lastReturn = ac.returnDates?.length > 0 ? ac.returnDates[ac.returnDates.length - 1].date : savedBooking.returnDate;
-            const retDate = new Date(lastReturn);
-            retDate.setHours(0, 0, 0, 0);
-            let rentedDays = Math.round((retDate - pickupDateObj) / (1000 * 60 * 60 * 24));
-            if (rentedDays <= 0) rentedDays = 0; else rentedDays += 1;
-            const itemDays = ac.rentalDays || savedBooking.totalDays || rentedDays || 1;
-            lines.push(`• ${name} - ${rentedDays} day${rentedDays !== 1 ? 's' : ''} rented (${itemDays} day${itemDays !== 1 ? 's' : ''} booked)`);
+            const lastReturn = ac.returnDates?.length > 0 ? ac.returnDates[ac.returnDates.length - 1].date : (ac.actualReturnDate || savedBooking.returnDate);
+            const rentedDays = ac.rentalDays || calculate24HourRentalDays(savedBooking.pickupDate, lastReturn, 2);
+            const bookedDays = savedBooking.totalDays || 1;
+            lines.push(`• ${name} - ${rentedDays} day${rentedDays !== 1 ? 's' : ''} rented (${bookedDays} day${bookedDays !== 1 ? 's' : ''} booked)`);
           });
           return lines.join('\n');
         };

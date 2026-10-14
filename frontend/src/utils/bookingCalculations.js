@@ -1,3 +1,45 @@
+/**
+ * Calculates rental days based on a 24-hour cycle with an optional grace period.
+ * 
+ * Rules:
+ * 1. 24 hours from pickup = 1 rental day.
+ * 2. Grace period (default 2 hours): If exceeded by <= graceHours (e.g. 26 hours total),
+ *    it does NOT advance to the next day. E.g. 48h to 50h remains 2 days.
+ * 3. If exceeded by > graceHours (e.g. 51 hours), advances to next day (e.g. 3 days).
+ * 4. Minimum rental period is 1 day.
+ * 5. If date-only strings are provided without time (e.g., '2026-10-14' to '2026-10-15'),
+ *    it treats each calendar day interval as 24 hours: 14th to 15th is 1 day. Same-day is 1 day.
+ */
+export function calculate24HourRentalDays(pickupDate, returnDate, graceHours = 2) {
+  if (!pickupDate || !returnDate) return 1;
+  const p = new Date(pickupDate);
+  const r = new Date(returnDate);
+  if (isNaN(p.getTime()) || isNaN(r.getTime())) return 1;
+
+  const diffMs = r.getTime() - p.getTime();
+  if (diffMs <= 0) return 1;
+
+  const diffHours = diffMs / (1000 * 60 * 60);
+
+  // Pure midnight dates (date strings without explicit time)
+  const isMidnight = (d) => d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0;
+  if (isMidnight(p) && isMidnight(r)) {
+    const calendarDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    return calendarDays <= 0 ? 1 : calendarDays;
+  }
+
+  const fullDays = Math.floor(diffHours / 24);
+  const remainingHours = diffHours % 24;
+
+  if (fullDays === 0) return 1;
+
+  if (remainingHours <= graceHours) {
+    return Math.max(1, fullDays);
+  } else {
+    return Math.max(1, fullDays + 1);
+  }
+}
+
 /** Shared booking price calculations (tools × qty × days + accessories + transport − discount) */
 
 export function calculateBookingCosts(formData, totalDays = 1) {
@@ -19,14 +61,7 @@ export function calculateBookingCosts(formData, totalDays = 1) {
         
         let diffDays = Number(rd.days);
         if (!diffDays || isNaN(diffDays) || diffDays <= 0) {
-          const rdDate = new Date(rd.date);
-          rdDate.setHours(0,0,0,0);
-          const pickupDateObj = new Date(pickup);
-          pickupDateObj.setHours(0,0,0,0);
-          
-          diffDays = Math.round((rdDate - pickupDateObj) / (1000 * 60 * 60 * 24));
-          if (diffDays <= 0) diffDays = 1;
-          else diffDays += 1;
+          diffDays = calculate24HourRentalDays(pickup, rd.date, 2);
         }
         cost += rate * qty * diffDays;
       });
@@ -36,12 +71,7 @@ export function calculateBookingCosts(formData, totalDays = 1) {
     if (unreturned > 0) {
       let daysForUnreturned = (item.rentalDays && Number(item.rentalDays) > 0) ? Number(item.rentalDays) : days;
       if (formData.actualReturnDate && !item.rentalDays) {
-         const actDate = new Date(formData.actualReturnDate);
-         actDate.setHours(0,0,0,0);
-         const pickupDateObj = new Date(pickup);
-         pickupDateObj.setHours(0,0,0,0);
-         daysForUnreturned = Math.round((actDate - pickupDateObj) / (1000 * 60 * 60 * 24)) + 1;
-         if (daysForUnreturned < 1) daysForUnreturned = 1;
+         daysForUnreturned = calculate24HourRentalDays(pickup, formData.actualReturnDate, 2);
       }
       cost += rate * unreturned * daysForUnreturned;
     }
